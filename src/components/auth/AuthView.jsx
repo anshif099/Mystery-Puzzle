@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const AuthView = () => {
+const AuthView = ({ setView }) => {
   const [formData, setFormData] = useState({
     email: '', password: ''
   });
@@ -14,9 +14,16 @@ const AuthView = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e, setView) => {
     e.preventDefault();
     if (validate()) {
+      // Super Admin Check
+      if (formData.email === 'mystery@gmail.com' && formData.password === 'mystery@123') {
+        alert('Logging in as Super Admin...');
+        setView('admin');
+        return;
+      }
+
       // Role detection simulation
       if (formData.email.startsWith('admin')) {
         alert('Redirecting to Admin Dashboard...');
@@ -56,7 +63,7 @@ const AuthView = () => {
             <p className="text-gray-500 font-medium">Login to your account to continue the challenge.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={(e) => handleSubmit(e, setView)} className="space-y-6">
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2 px-1">Email Address</label>
               <input 
