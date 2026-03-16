@@ -43,7 +43,7 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout }) => {
     <aside className="w-64 bg-mint h-screen fixed left-0 top-0 shadow-2xl z-40 flex flex-col">
       <div className="p-8 mb-4">
         <div className="flex items-center gap-3">
-          <img src="/icons.png" alt="Logo" className="w-10 h-10 brightness-0 invert" />
+          <img src="/icons.png" alt="Logo" className="w-10 h-10 object-contain" />
           <span className="text-white font-black text-lg tracking-tighter">ADMIN PANEL</span>
         </div>
       </div>
