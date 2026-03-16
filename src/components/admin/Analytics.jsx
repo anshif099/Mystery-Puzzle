@@ -79,24 +79,24 @@ const Analytics = () => {
   };
 
   return (
-    <div className="grid lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white p-8 rounded-[40px] soft-shadow border border-gray-50 h-[400px]">
-        <h3 className="text-xl font-black mb-6 uppercase tracking-tight">Total Participants Over Time</h3>
-        <div className="h-[300px]">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="bg-white p-4 lg:p-8 rounded-[32px] lg:rounded-[40px] soft-shadow border border-gray-50 h-[350px] lg:h-[400px]">
+        <h3 className="text-sm lg:text-xl font-black mb-6 uppercase tracking-tight">Total Participants Over Time</h3>
+        <div className="h-[250px] lg:h-[300px]">
           <Line data={lineData} options={options} />
         </div>
       </div>
 
-      <div className="bg-white p-8 rounded-[40px] soft-shadow border border-gray-50 h-[400px]">
-        <h3 className="text-xl font-black mb-6 uppercase tracking-tight">Puzzle Success Rate</h3>
-        <div className="h-[300px]">
+      <div className="bg-white p-4 lg:p-8 rounded-[32px] lg:rounded-[40px] soft-shadow border border-gray-50 h-[350px] lg:h-[400px]">
+        <h3 className="text-sm lg:text-xl font-black mb-6 uppercase tracking-tight">Puzzle Success Rate</h3>
+        <div className="h-[250px] lg:h-[300px]">
           <Pie data={pieData} options={options} />
         </div>
       </div>
 
-      <div className="bg-white p-8 rounded-[40px] soft-shadow border border-gray-50 h-[400px] lg:col-span-2">
-        <h3 className="text-xl font-black mb-6 uppercase tracking-tight">Average Completion Time by Campaign</h3>
-        <div className="h-[300px]">
+      <div className="bg-white p-4 lg:p-8 rounded-[32px] lg:rounded-[40px] soft-shadow border border-gray-50 h-[350px] lg:h-[400px] lg:col-span-2">
+        <h3 className="text-sm lg:text-xl font-black mb-6 uppercase tracking-tight">Average Completion Time by Campaign</h3>
+        <div className="h-[250px] lg:h-[300px]">
           <Bar data={barData} options={options} />
         </div>
       </div>

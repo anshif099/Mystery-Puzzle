@@ -26,8 +26,8 @@ const CompanyManagement = () => {
         </button>
       </div>
 
-      <div className="bg-white rounded-[40px] shadow-sm border border-gray-50 overflow-hidden">
-        <table className="w-full text-left border-collapse">
+      <div className="bg-white rounded-[40px] shadow-sm border border-gray-50 overflow-hidden overflow-x-auto">
+        <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr className="bg-gray-50/50">
               <th className="px-8 py-6 text-sm font-black text-gray-600 uppercase tracking-widest">Company Name</th>

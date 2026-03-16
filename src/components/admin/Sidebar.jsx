@@ -26,7 +26,7 @@ const SidebarItem = ({ icon: Icon, label, active, onClick }) => (
   </div>
 );
 
-const Sidebar = ({ activeTab, setActiveTab, onLogout }) => {
+const Sidebar = ({ activeTab, setActiveTab, onLogout, isOpen, onClose }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'companies', label: 'Company Admins', icon: Users },
@@ -40,12 +40,21 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout }) => {
   ];
 
   return (
-    <aside className="w-64 bg-mint h-screen fixed left-0 top-0 shadow-2xl z-40 flex flex-col">
-      <div className="p-8 mb-4">
+    <aside className={`
+      w-64 bg-mint h-screen fixed left-0 top-0 shadow-2xl z-50 flex flex-col transition-transform duration-300 ease-in-out
+      ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+    `}>
+      <div className="p-8 mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src="/icons.png" alt="Logo" className="w-10 h-10 object-contain" />
-          <span className="text-white font-black text-lg tracking-tighter">ADMIN PANEL</span>
+          <span className="text-white font-black text-lg tracking-tighter">ADMIN</span>
         </div>
+        <button 
+          onClick={onClose}
+          className="p-2 bg-white/10 hover:bg-white/20 rounded-lg lg:hidden text-white"
+        >
+          <LogOut size={18} className="rotate-180" />
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto">

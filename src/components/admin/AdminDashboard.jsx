@@ -16,6 +16,9 @@ const PlaceholderView = ({ title }) => (
 
 const AdminDashboard = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
   const renderContent = () => {
     switch (activeTab) {
@@ -48,17 +51,34 @@ const AdminDashboard = ({ onLogout }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-[#F8FAFC] flex relative overflow-x-hidden">
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={(tab) => {
+          setActiveTab(tab);
+          setIsSidebarOpen(false);
+        }} 
         onLogout={onLogout} 
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
       
-      <div className="ml-64 min-h-screen flex flex-col">
-        <TopNav title={getTitle()} onLogout={onLogout} />
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopNav 
+          title={getTitle()} 
+          onLogout={onLogout} 
+          onMenuClick={toggleSidebar}
+        />
         
-        <main className="flex-1 mt-20 p-8 pt-10">
+        <main className="flex-1 mt-20 p-4 lg:p-8 pt-10">
           <div className="max-w-7xl mx-auto">
             {renderContent()}
           </div>
