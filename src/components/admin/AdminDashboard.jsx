@@ -71,7 +71,7 @@ const AdminDashboard = ({ onLogout }) => {
         onClose={() => setIsSidebarOpen(false)}
       />
       
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
         <TopNav 
           title={getTitle()} 
           onLogout={onLogout} 
