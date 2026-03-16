@@ -6,7 +6,18 @@ import AuthView from './components/auth/AuthView';
 import AdminDashboard from './components/admin/AdminDashboard';
 
 function App() {
-  const [view, setView] = useState('landing');
+  const [view, setView] = useState(() => {
+    return localStorage.getItem('puzzle_view') || 'landing';
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('puzzle_view', view);
+  }, [view]);
+
+  const handleLogout = () => {
+    setView('landing');
+    localStorage.removeItem('puzzle_view');
+  };
 
   return (
     <div className="min-h-screen font-sans selection:bg-mint/30 overflow-x-hidden">
@@ -20,7 +31,7 @@ function App() {
         ) : view === 'auth' ? (
           <AuthView setView={setView} />
         ) : (
-          <AdminDashboard onLogout={() => setView('landing')} />
+          <AdminDashboard onLogout={handleLogout} />
         )}
       </main>
 
