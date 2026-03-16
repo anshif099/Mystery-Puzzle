@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+:root {
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+
+body {
+  @apply bg-white text-gray-900 overflow-x-hidden;
+}
+
+.pastel-gradient {
+  background: linear-gradient(135deg, #63D3A4, #9AA6D6);
+}
+
+.soft-shadow {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+}
+
+.floating-piece {
+  @apply absolute opacity-20 pointer-events-none;
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
