@@ -14,6 +14,30 @@ import {
 } from "../../services/challengeService";
 import { clearSession } from "../../services/session";
 
+const buildSolvedTiles = (pieceCount) =>
+  Array.from({ length: pieceCount }, (_, index) => index);
+
+const isSolvedArrangement = (tiles, solvedTiles) =>
+  tiles.every((value, index) => value === solvedTiles[index]);
+
+const shuffleTiles = (solvedTiles) => {
+  if (!Array.isArray(solvedTiles) || solvedTiles.length < 2) {
+    return [...(solvedTiles || [])];
+  }
+
+  const next = [...solvedTiles];
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[randomIndex]] = [next[randomIndex], next[index]];
+  }
+
+  if (isSolvedArrangement(next, solvedTiles)) {
+    [next[0], next[1]] = [next[1], next[0]];
+  }
+
+  return next;
+};
+
 const PlayPortal = ({
   companyId,
   campaignKey,
@@ -39,6 +63,8 @@ const PlayPortal = ({
     phone: "",
     email: "",
   });
+  const [tiles, setTiles] = useState([]);
+  const [selectedTileIndex, setSelectedTileIndex] = useState(null);
 
   useEffect(() => {
     if (!companyId) {
@@ -117,12 +143,31 @@ const PlayPortal = ({
   );
 
   const leaderboard = useMemo(() => buildLeaderboard(users, attempts), [users, attempts]);
+  const pieceCount = useMemo(() => {
+    const raw = Number(campaign?.difficulty) || 16;
+    const grid = Math.max(2, Math.round(Math.sqrt(raw)));
+    return grid * grid;
+  }, [campaign?.difficulty]);
+  const gridSize = useMemo(() => Math.sqrt(pieceCount), [pieceCount]);
+  const solvedTiles = useMemo(() => buildSolvedTiles(pieceCount), [pieceCount]);
 
   const canStart =
     Boolean(campaign?.isActive) &&
     Boolean(user) &&
     userStats.count < Number(campaign?.maxAttempts || 3) &&
-    !userStats.solved;
+    !userStats.solved &&
+    Boolean(campaign?.puzzleImage);
+
+  useEffect(() => {
+    if (mode !== "game" || !campaign?.puzzleImage) {
+      return;
+    }
+
+    setTiles(shuffleTiles(solvedTiles));
+    setSelectedTileIndex(null);
+    setStarted(false);
+    setTimerLeft(Number(campaign?.timerSeconds) || 180);
+  }, [mode, campaign?.puzzleImage, campaign?.timerSeconds, solvedTiles]);
 
   const handleGoogleLogin = async () => {
     if (!companyId) {
@@ -195,13 +240,52 @@ const PlayPortal = ({
   };
 
   const handleStartPuzzle = () => {
-    if (!campaign) {
+    if (!campaign || !campaign.puzzleImage) {
       return;
     }
     setMessage("");
     setError("");
+    setTiles(shuffleTiles(solvedTiles));
+    setSelectedTileIndex(null);
     setTimerLeft(Number(campaign.timerSeconds) || 180);
     setStarted(true);
+  };
+
+  const handleTileTap = (tilePositionIndex) => {
+    if (!started || attemptSaving || userStats.solved) {
+      return;
+    }
+
+    if (selectedTileIndex === null) {
+      setSelectedTileIndex(tilePositionIndex);
+      return;
+    }
+
+    if (selectedTileIndex === tilePositionIndex) {
+      setSelectedTileIndex(null);
+      return;
+    }
+
+    setTiles((previousTiles) => {
+      const nextTiles = [...previousTiles];
+      [nextTiles[selectedTileIndex], nextTiles[tilePositionIndex]] = [
+        nextTiles[tilePositionIndex],
+        nextTiles[selectedTileIndex],
+      ];
+
+      if (isSolvedArrangement(nextTiles, solvedTiles)) {
+        const completionTime = Math.max(
+          0,
+          Number(campaign?.timerSeconds || 180) - Number(timerLeft || 0)
+        );
+        setStarted(false);
+        setMessage("Puzzle solved. Saving result...");
+        setTimeout(() => submitAttempt("solved", completionTime), 0);
+      }
+
+      return nextTiles;
+    });
+    setSelectedTileIndex(null);
   };
 
   const submitAttempt = async (status, forcedTime) => {
@@ -439,13 +523,42 @@ const PlayPortal = ({
 
               {campaign?.puzzleImage ? (
                 <div className="mt-6 rounded-3xl border border-gray-100 bg-gray-50 p-4">
-                  <img
-                    src={campaign.puzzleImage}
-                    alt="Puzzle"
-                    className="w-full max-h-96 object-contain rounded-2xl"
-                  />
+                  <div
+                    className="grid gap-1 bg-white rounded-2xl border border-gray-100 p-2 mx-auto w-full max-w-[520px]"
+                    style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
+                  >
+                    {tiles.map((tilePieceIndex, tilePositionIndex) => {
+                      const row = Math.floor(tilePieceIndex / gridSize);
+                      const col = tilePieceIndex % gridSize;
+                      const bgX = gridSize > 1 ? (col / (gridSize - 1)) * 100 : 0;
+                      const bgY = gridSize > 1 ? (row / (gridSize - 1)) * 100 : 0;
+
+                      return (
+                        <button
+                          key={`${tilePieceIndex}-${tilePositionIndex}`}
+                          type="button"
+                          onClick={() => handleTileTap(tilePositionIndex)}
+                          className={`aspect-square rounded-lg border transition-all ${
+                            selectedTileIndex === tilePositionIndex
+                              ? "border-mint ring-2 ring-mint/50 scale-[0.98]"
+                              : "border-white/70"
+                          }`}
+                          style={{
+                            backgroundImage: `url(${campaign.puzzleImage})`,
+                            backgroundSize: `${gridSize * 100}% ${gridSize * 100}%`,
+                            backgroundPosition: `${bgX}% ${bgY}%`,
+                            backgroundRepeat: "no-repeat",
+                          }}
+                          aria-label={`Puzzle tile ${tilePositionIndex + 1}`}
+                        />
+                      );
+                    })}
+                  </div>
                   <p className="mt-3 text-sm font-semibold text-gray-500">
                     Puzzle Difficulty: {campaign?.difficulty || 16} pieces
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-gray-400">
+                    Tap two pieces to swap their positions.
                   </p>
                 </div>
               ) : (
@@ -465,11 +578,18 @@ const PlayPortal = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => submitAttempt("solved")}
-                  disabled={!started || attemptSaving}
+                  onClick={() => {
+                    if (!started || attemptSaving) {
+                      return;
+                    }
+                    setTiles(shuffleTiles(solvedTiles));
+                    setSelectedTileIndex(null);
+                    setTimerLeft(Number(campaign?.timerSeconds || 180));
+                  }}
+                  disabled={!canStart || attemptSaving}
                   className="bg-mint text-white px-5 py-3 rounded-2xl font-black disabled:opacity-60"
                 >
-                  Mark Solved
+                  Shuffle Again
                 </button>
                 <button
                   type="button"
