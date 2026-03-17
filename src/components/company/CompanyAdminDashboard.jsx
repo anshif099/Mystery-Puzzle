@@ -14,7 +14,7 @@ import {
 
 const toDraft = (campaign) => ({
   puzzleImage: campaign?.puzzleImage || "",
-  difficulty: String(campaign?.difficulty || 16),
+  difficulty: String(campaign?.difficulty || 15),
   timerMinutes: String(Math.max(1, Math.round((campaign?.timerSeconds || 180) / 60))),
   maxAttempts: String(campaign?.maxAttempts || 3),
   campaignKey: campaign?.campaignKey || generateCampaignKey(),
@@ -122,7 +122,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     try {
       const payload = {
         puzzleImage: draft.puzzleImage || "",
-        difficulty: Number(draft.difficulty) || 16,
+        difficulty: Number(draft.difficulty) || 15,
         timerSeconds: (Number(draft.timerMinutes) || 3) * 60,
         maxAttempts: Number(draft.maxAttempts) || 3,
         campaignKey: draft.campaignKey || generateCampaignKey(),
@@ -265,6 +265,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                     onChange={(event) => handleDraftChange("difficulty", event.target.value)}
                     className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
                   >
+                    <option value="15">15 Pieces (1 Blank)</option>
                     <option value="16">16 Pieces</option>
                     <option value="25">25 Pieces</option>
                     <option value="36">36 Pieces</option>

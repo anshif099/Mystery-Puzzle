@@ -14,11 +14,34 @@ import {
 } from "../../services/challengeService";
 import { clearSession } from "../../services/session";
 
+const BLANK_TILE = -1;
+
 const buildSolvedTiles = (pieceCount) =>
   Array.from({ length: pieceCount }, (_, index) => index);
 
 const isSolvedArrangement = (tiles, solvedTiles) =>
   tiles.every((value, index) => value === solvedTiles[index]);
+
+const getNeighborIndexes = (index, gridSize) => {
+  const row = Math.floor(index / gridSize);
+  const col = index % gridSize;
+  const neighbors = [];
+
+  if (row > 0) neighbors.push(index - gridSize);
+  if (row < gridSize - 1) neighbors.push(index + gridSize);
+  if (col > 0) neighbors.push(index - 1);
+  if (col < gridSize - 1) neighbors.push(index + 1);
+
+  return neighbors;
+};
+
+const isAdjacent = (first, second, gridSize) => {
+  const firstRow = Math.floor(first / gridSize);
+  const firstCol = first % gridSize;
+  const secondRow = Math.floor(second / gridSize);
+  const secondCol = second % gridSize;
+  return Math.abs(firstRow - secondRow) + Math.abs(firstCol - secondCol) === 1;
+};
 
 const shuffleTiles = (solvedTiles) => {
   if (!Array.isArray(solvedTiles) || solvedTiles.length < 2) {
@@ -33,6 +56,35 @@ const shuffleTiles = (solvedTiles) => {
 
   if (isSolvedArrangement(next, solvedTiles)) {
     [next[0], next[1]] = [next[1], next[0]];
+  }
+
+  return next;
+};
+
+const shuffleSlidingTiles = (solvedTiles, gridSize) => {
+  if (!Array.isArray(solvedTiles) || solvedTiles.length < 2) {
+    return [...(solvedTiles || [])];
+  }
+
+  let next = [...solvedTiles];
+  let blankIndex = next.indexOf(BLANK_TILE);
+  let previousBlankIndex = -1;
+
+  for (let move = 0; move < 200; move += 1) {
+    const neighbors = getNeighborIndexes(blankIndex, gridSize).filter(
+      (index) => index !== previousBlankIndex
+    );
+    const candidates = neighbors.length ? neighbors : getNeighborIndexes(blankIndex, gridSize);
+    const selected = candidates[Math.floor(Math.random() * candidates.length)];
+    [next[blankIndex], next[selected]] = [next[selected], next[blankIndex]];
+    previousBlankIndex = blankIndex;
+    blankIndex = selected;
+  }
+
+  if (isSolvedArrangement(next, solvedTiles)) {
+    const neighbors = getNeighborIndexes(blankIndex, gridSize);
+    const selected = neighbors[0];
+    [next[blankIndex], next[selected]] = [next[selected], next[blankIndex]];
   }
 
   return next;
@@ -143,13 +195,24 @@ const PlayPortal = ({
   );
 
   const leaderboard = useMemo(() => buildLeaderboard(users, attempts), [users, attempts]);
-  const pieceCount = useMemo(() => {
-    const raw = Number(campaign?.difficulty) || 16;
-    const grid = Math.max(2, Math.round(Math.sqrt(raw)));
-    return grid * grid;
-  }, [campaign?.difficulty]);
-  const gridSize = useMemo(() => Math.sqrt(pieceCount), [pieceCount]);
-  const solvedTiles = useMemo(() => buildSolvedTiles(pieceCount), [pieceCount]);
+  const difficulty = useMemo(() => Number(campaign?.difficulty) || 15, [campaign?.difficulty]);
+  const isBlankSlidingMode = difficulty === 15;
+  const gridSize = useMemo(() => {
+    if (isBlankSlidingMode) {
+      return 4;
+    }
+    return Math.max(2, Math.round(Math.sqrt(difficulty)));
+  }, [difficulty, isBlankSlidingMode]);
+  const pieceCount = useMemo(
+    () => (isBlankSlidingMode ? gridSize * gridSize - 1 : gridSize * gridSize),
+    [gridSize, isBlankSlidingMode]
+  );
+  const solvedTiles = useMemo(() => {
+    if (isBlankSlidingMode) {
+      return [...buildSolvedTiles(pieceCount), BLANK_TILE];
+    }
+    return buildSolvedTiles(pieceCount);
+  }, [isBlankSlidingMode, pieceCount]);
 
   const canStart =
     Boolean(campaign?.isActive) &&
@@ -163,11 +226,14 @@ const PlayPortal = ({
       return;
     }
 
-    setTiles(shuffleTiles(solvedTiles));
+    const nextTiles = isBlankSlidingMode
+      ? shuffleSlidingTiles(solvedTiles, gridSize)
+      : shuffleTiles(solvedTiles);
+    setTiles(nextTiles);
     setSelectedTileIndex(null);
     setStarted(false);
     setTimerLeft(Number(campaign?.timerSeconds) || 180);
-  }, [mode, campaign?.puzzleImage, campaign?.timerSeconds, solvedTiles]);
+  }, [mode, campaign?.puzzleImage, campaign?.timerSeconds, solvedTiles, isBlankSlidingMode, gridSize]);
 
   const handleGoogleLogin = async () => {
     if (!companyId) {
@@ -245,7 +311,10 @@ const PlayPortal = ({
     }
     setMessage("");
     setError("");
-    setTiles(shuffleTiles(solvedTiles));
+    const nextTiles = isBlankSlidingMode
+      ? shuffleSlidingTiles(solvedTiles, gridSize)
+      : shuffleTiles(solvedTiles);
+    setTiles(nextTiles);
     setSelectedTileIndex(null);
     setTimerLeft(Number(campaign.timerSeconds) || 180);
     setStarted(true);
@@ -253,6 +322,34 @@ const PlayPortal = ({
 
   const handleTileTap = (tilePositionIndex) => {
     if (!started || attemptSaving || userStats.solved) {
+      return;
+    }
+
+    if (isBlankSlidingMode) {
+      setTiles((previousTiles) => {
+        const blankIndex = previousTiles.indexOf(BLANK_TILE);
+        if (blankIndex < 0 || !isAdjacent(tilePositionIndex, blankIndex, gridSize)) {
+          return previousTiles;
+        }
+
+        const nextTiles = [...previousTiles];
+        [nextTiles[blankIndex], nextTiles[tilePositionIndex]] = [
+          nextTiles[tilePositionIndex],
+          nextTiles[blankIndex],
+        ];
+
+        if (isSolvedArrangement(nextTiles, solvedTiles)) {
+          const completionTime = Math.max(
+            0,
+            Number(campaign?.timerSeconds || 180) - Number(timerLeft || 0)
+          );
+          setStarted(false);
+          setMessage("Puzzle solved. Saving result...");
+          setTimeout(() => submitAttempt("solved", completionTime), 0);
+        }
+
+        return nextTiles;
+      });
       return;
     }
 
@@ -463,7 +560,10 @@ const PlayPortal = ({
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
               <h3 className="text-xl font-black text-gray-900">Campaign Details</h3>
               <div className="mt-5 space-y-3 text-gray-700 font-semibold">
-                <p>Difficulty: {campaign?.difficulty || 16} pieces</p>
+                <p>
+                  Difficulty: {campaign?.difficulty || 15} pieces
+                  {Number(campaign?.difficulty) === 15 ? " (1 blank)" : ""}
+                </p>
                 <p>Timer: {formatDuration(campaign?.timerSeconds || 180)}</p>
                 <p>Max Attempts: {campaign?.maxAttempts || 3}</p>
                 <p>
@@ -528,6 +628,7 @@ const PlayPortal = ({
                     style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
                   >
                     {tiles.map((tilePieceIndex, tilePositionIndex) => {
+                      const isBlank = tilePieceIndex === BLANK_TILE;
                       const row = Math.floor(tilePieceIndex / gridSize);
                       const col = tilePieceIndex % gridSize;
                       const bgX = gridSize > 1 ? (col / (gridSize - 1)) * 100 : 0;
@@ -539,26 +640,34 @@ const PlayPortal = ({
                           type="button"
                           onClick={() => handleTileTap(tilePositionIndex)}
                           className={`aspect-square rounded-lg border transition-all ${
-                            selectedTileIndex === tilePositionIndex
+                            isBlank
+                              ? "bg-white border-gray-200"
+                              : selectedTileIndex === tilePositionIndex
                               ? "border-mint ring-2 ring-mint/50 scale-[0.98]"
                               : "border-white/70"
                           }`}
                           style={{
-                            backgroundImage: `url(${campaign.puzzleImage})`,
-                            backgroundSize: `${gridSize * 100}% ${gridSize * 100}%`,
-                            backgroundPosition: `${bgX}% ${bgY}%`,
-                            backgroundRepeat: "no-repeat",
+                            backgroundImage: isBlank ? "none" : `url(${campaign.puzzleImage})`,
+                            backgroundSize: isBlank
+                              ? undefined
+                              : `${gridSize * 100}% ${gridSize * 100}%`,
+                            backgroundPosition: isBlank ? undefined : `${bgX}% ${bgY}%`,
+                            backgroundRepeat: isBlank ? undefined : "no-repeat",
                           }}
+                          disabled={isBlank}
                           aria-label={`Puzzle tile ${tilePositionIndex + 1}`}
                         />
                       );
                     })}
                   </div>
                   <p className="mt-3 text-sm font-semibold text-gray-500">
-                    Puzzle Difficulty: {campaign?.difficulty || 16} pieces
+                    Puzzle Difficulty: {campaign?.difficulty || 15} pieces
+                    {isBlankSlidingMode ? " (1 blank move mode)" : ""}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-gray-400">
-                    Tap two pieces to swap their positions.
+                    {isBlankSlidingMode
+                      ? "Tap a tile next to blank area to move it."
+                      : "Tap two pieces to swap their positions."}
                   </p>
                 </div>
               ) : (
@@ -582,7 +691,10 @@ const PlayPortal = ({
                     if (!started || attemptSaving) {
                       return;
                     }
-                    setTiles(shuffleTiles(solvedTiles));
+                    const nextTiles = isBlankSlidingMode
+                      ? shuffleSlidingTiles(solvedTiles, gridSize)
+                      : shuffleTiles(solvedTiles);
+                    setTiles(nextTiles);
                     setSelectedTileIndex(null);
                     setTimerLeft(Number(campaign?.timerSeconds || 180));
                   }}

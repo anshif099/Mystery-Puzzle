@@ -31,7 +31,7 @@ const normalizeCampaign = (data, companyId) => ({
   companyId,
   isActive: Boolean(data?.isActive),
   puzzleImage: data?.puzzleImage || "",
-  difficulty: Number(data?.difficulty) || 16,
+  difficulty: Number(data?.difficulty) || 15,
   timerSeconds: Number(data?.timerSeconds) || 180,
   maxAttempts: Number(data?.maxAttempts) || 3,
   campaignKey: data?.campaignKey || "",
