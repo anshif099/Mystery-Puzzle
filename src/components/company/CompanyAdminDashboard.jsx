@@ -484,7 +484,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
 
   const titleByTab = {
     dashboard: "Company Dashboard",
-    campaigns: "Campaign Management",
+    campaigns: "Puzzle Management",
     subscription: "Subscription Countdown",
   };
 
@@ -535,7 +535,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
           />
           <SidebarItem
             icon={Flag}
-            label="Campaign Management"
+            label="Puzzle Management"
             active={activeTab === "campaigns"}
             onClick={() => {
               setActiveTab("campaigns");
