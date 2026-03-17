@@ -1,4 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
@@ -28,3 +29,9 @@ const app = firebaseConfigured
   : null;
 
 export const realtimeDb = app ? getDatabase(app) : null;
+export const firebaseAuth = app ? getAuth(app) : null;
+export const googleProvider = app ? new GoogleAuthProvider() : null;
+
+if (googleProvider) {
+  googleProvider.setCustomParameters({ prompt: "select_account" });
+}

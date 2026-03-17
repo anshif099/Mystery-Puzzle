@@ -15,16 +15,58 @@ The React Compiler is not enabled on this template because of its impact on dev 
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
 
-## Company Admin Cloud Sync Setup
+## Mystery Puzzle Firebase Setup
 
-Company Admin records now use internet storage so data appears on any device after admin login.
+This app now includes:
+
+- Super Admin login
+- Company Admin login (same login page)
+- Company Admin campaign dashboard
+- QR based user login flow (`/play?companyId=...&campaign=...`)
+- Optional Google sign-in for users
+- Puzzle attempt + leaderboard storage
+- Realtime sync for dashboard metrics and participant data
+
+### 1) Environment
 
 1. Copy `.env.example` to `.env`.
-2. Keep the provided `VITE_FIREBASE_*` values (or replace with your own Firebase project values).
-3. In Firebase Console, enable **Realtime Database** for project `mystery-9918e`.
-4. Set Realtime Database rules to allow your admin app to read/write company admins.
-5. Restart the app after changing environment variables.
+2. Verify Firebase values for your project.
+3. Restart `npm run dev` after env changes.
 
-Path used by the app:
+### 2) Realtime Database Paths Used
 
-- `companyAdmins`
+- `admins/company_admins/{companyId}`
+- `campaigns/{companyId}`
+- `users/{companyId}/{userId}`
+- `attempts/{companyId}/{attemptId}`
+
+### 3) Realtime Database Rules (Basic)
+
+Use these rules to unblock development quickly:
+
+```json
+{
+  "rules": {
+    "admins": {
+      "company_admins": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "campaigns": {
+      ".read": true,
+      ".write": true
+    },
+    "users": {
+      ".read": true,
+      ".write": true
+    },
+    "attempts": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
+```
+
+After testing, tighten these with Firebase Auth checks.
