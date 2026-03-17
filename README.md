@@ -20,10 +20,11 @@ If you are developing a production application, we recommend using TypeScript wi
 Company Admin records now use internet storage so data appears on any device after admin login.
 
 1. Copy `.env.example` to `.env`.
-2. Set `VITE_COMPANY_ADMIN_API_URL` to your Firebase Realtime Database URL.
-3. If your database requires auth, set `VITE_COMPANY_ADMIN_API_TOKEN`.
-4. Restart the app after changing environment variables.
+2. Keep the provided `VITE_FIREBASE_*` values (or replace with your own Firebase project values).
+3. In Firebase Console, enable **Cloud Firestore** for project `mystery-9918e`.
+4. Set Firestore rules to allow your admin app to read/write company admins.
+5. Restart the app after changing environment variables.
 
-Example Firebase database path used by the app:
+Collection used by the app:
 
 - `companyAdmins`

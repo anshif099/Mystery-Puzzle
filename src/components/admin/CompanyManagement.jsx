@@ -72,7 +72,7 @@ const CompanyManagement = () => {
     if (!cloudCompanyAdminConfigured()) {
       setCompanies(getCompanyAdminsCached());
       setPageError(
-        "Cloud not configured. Add VITE_COMPANY_ADMIN_API_URL to enable internet sync across devices."
+        "Firebase is not configured. Add VITE_FIREBASE_* keys to enable internet sync across devices."
       );
       setLoading(false);
       return;
@@ -136,7 +136,7 @@ const CompanyManagement = () => {
     try {
       if (!cloudCompanyAdminConfigured()) {
         setFormError(
-          "Cloud is not configured. Add VITE_COMPANY_ADMIN_API_URL to save data online."
+          "Firebase is not configured. Add VITE_FIREBASE_* keys to save data online."
         );
         return;
       }
@@ -196,7 +196,7 @@ const CompanyManagement = () => {
     try {
       if (!cloudCompanyAdminConfigured()) {
         setPageError(
-          "Cloud is not configured. Add VITE_COMPANY_ADMIN_API_URL to enable delete."
+          "Firebase is not configured. Add VITE_FIREBASE_* keys to enable delete."
         );
         return;
       }
@@ -214,7 +214,7 @@ const CompanyManagement = () => {
     try {
       if (!cloudCompanyAdminConfigured()) {
         setPageError(
-          "Cloud is not configured. Add VITE_COMPANY_ADMIN_API_URL to update status."
+          "Firebase is not configured. Add VITE_FIREBASE_* keys to update status."
         );
         return;
       }
