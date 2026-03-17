@@ -14,10 +14,10 @@ import {
 
 const normalizeDifficultyOption = (value) => {
   const raw = Number(value);
-  if (raw === 15 || raw === 16) return 15;
-  if (raw === 24 || raw === 25) return 24;
-  if (raw === 35 || raw === 36) return 35;
-  return 15;
+  if ([8, 12, 16, 24].includes(raw)) return raw;
+  if (raw === 15) return 16;
+  if (raw === 25 || raw === 35 || raw === 36 || raw === 5 || raw === 6) return 24;
+  return 16;
 };
 
 const toDraft = (campaign) => ({
@@ -273,9 +273,10 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                     onChange={(event) => handleDraftChange("difficulty", event.target.value)}
                     className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
                   >
-                    <option value="15">15 Pieces (1 Blank)</option>
-                    <option value="24">24 Pieces (1 Blank)</option>
-                    <option value="35">35 Pieces (1 Blank)</option>
+                    <option value="8">8 Blocks</option>
+                    <option value="12">12 Blocks</option>
+                    <option value="16">16 Blocks</option>
+                    <option value="24">24 Blocks</option>
                   </select>
                 </div>
 

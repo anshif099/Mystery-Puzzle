@@ -15,6 +15,13 @@ import {
 import { clearSession } from "../../services/session";
 
 const BLANK_TILE = -1;
+const DIFFICULTY_LAYOUTS = {
+  8: { rows: 2, cols: 4 },
+  12: { rows: 3, cols: 4 },
+  16: { rows: 4, cols: 4 },
+  24: { rows: 4, cols: 6 },
+};
+const DEFAULT_DIFFICULTY = 16;
 
 const buildSolvedTiles = (pieceCount) =>
   Array.from({ length: pieceCount }, (_, index) => index);
@@ -22,35 +29,45 @@ const buildSolvedTiles = (pieceCount) =>
 const isSolvedArrangement = (tiles, solvedTiles) =>
   tiles.every((value, index) => value === solvedTiles[index]);
 
-const getNeighborIndexes = (index, gridSize) => {
-  const row = Math.floor(index / gridSize);
-  const col = index % gridSize;
+const resolveDifficultyValue = (difficultyValue) => {
+  const raw = Number(difficultyValue);
+  if (Object.prototype.hasOwnProperty.call(DIFFICULTY_LAYOUTS, raw)) {
+    return raw;
+  }
+  if (raw === 15) {
+    return 16;
+  }
+  if (raw === 25 || raw === 35 || raw === 36 || raw === 5 || raw === 6) {
+    return 24;
+  }
+  return DEFAULT_DIFFICULTY;
+};
+
+const resolvePuzzleLayout = (difficultyValue) =>
+  DIFFICULTY_LAYOUTS[resolveDifficultyValue(difficultyValue)] || DIFFICULTY_LAYOUTS[DEFAULT_DIFFICULTY];
+
+const getNeighborIndexes = (index, rows, cols) => {
+  const row = Math.floor(index / cols);
+  const col = index % cols;
   const neighbors = [];
 
-  if (row > 0) neighbors.push(index - gridSize);
-  if (row < gridSize - 1) neighbors.push(index + gridSize);
+  if (row > 0) neighbors.push(index - cols);
+  if (row < rows - 1) neighbors.push(index + cols);
   if (col > 0) neighbors.push(index - 1);
-  if (col < gridSize - 1) neighbors.push(index + 1);
+  if (col < cols - 1) neighbors.push(index + 1);
 
   return neighbors;
 };
 
-const isAdjacent = (first, second, gridSize) => {
-  const firstRow = Math.floor(first / gridSize);
-  const firstCol = first % gridSize;
-  const secondRow = Math.floor(second / gridSize);
-  const secondCol = second % gridSize;
+const isAdjacent = (first, second, cols) => {
+  const firstRow = Math.floor(first / cols);
+  const firstCol = first % cols;
+  const secondRow = Math.floor(second / cols);
+  const secondCol = second % cols;
   return Math.abs(firstRow - secondRow) + Math.abs(firstCol - secondCol) === 1;
 };
 
-const resolveGridSize = (difficultyValue) => {
-  const raw = Number(difficultyValue);
-  if (raw === 24 || raw === 25 || raw === 5) return 5;
-  if (raw === 35 || raw === 36 || raw === 6) return 6;
-  return 4;
-};
-
-const shuffleSlidingTiles = (solvedTiles, gridSize) => {
+const shuffleSlidingTiles = (solvedTiles, rows, cols) => {
   if (!Array.isArray(solvedTiles) || solvedTiles.length < 2) {
     return [...(solvedTiles || [])];
   }
@@ -60,10 +77,10 @@ const shuffleSlidingTiles = (solvedTiles, gridSize) => {
   let previousBlankIndex = -1;
 
   for (let move = 0; move < 200; move += 1) {
-    const neighbors = getNeighborIndexes(blankIndex, gridSize).filter(
+    const neighbors = getNeighborIndexes(blankIndex, rows, cols).filter(
       (index) => index !== previousBlankIndex
     );
-    const candidates = neighbors.length ? neighbors : getNeighborIndexes(blankIndex, gridSize);
+    const candidates = neighbors.length ? neighbors : getNeighborIndexes(blankIndex, rows, cols);
     const selected = candidates[Math.floor(Math.random() * candidates.length)];
     [next[blankIndex], next[selected]] = [next[selected], next[blankIndex]];
     previousBlankIndex = blankIndex;
@@ -71,7 +88,7 @@ const shuffleSlidingTiles = (solvedTiles, gridSize) => {
   }
 
   if (isSolvedArrangement(next, solvedTiles)) {
-    const neighbors = getNeighborIndexes(blankIndex, gridSize);
+    const neighbors = getNeighborIndexes(blankIndex, rows, cols);
     const selected = neighbors[0];
     [next[blankIndex], next[selected]] = [next[selected], next[blankIndex]];
   }
@@ -183,8 +200,17 @@ const PlayPortal = ({
   );
 
   const leaderboard = useMemo(() => buildLeaderboard(users, attempts), [users, attempts]);
-  const gridSize = useMemo(() => resolveGridSize(campaign?.difficulty), [campaign?.difficulty]);
-  const pieceCount = useMemo(() => gridSize * gridSize - 1, [gridSize]);
+  const difficultyValue = useMemo(
+    () => resolveDifficultyValue(campaign?.difficulty),
+    [campaign?.difficulty]
+  );
+  const puzzleLayout = useMemo(
+    () => resolvePuzzleLayout(campaign?.difficulty),
+    [campaign?.difficulty]
+  );
+  const rows = puzzleLayout.rows;
+  const cols = puzzleLayout.cols;
+  const pieceCount = useMemo(() => rows * cols - 1, [rows, cols]);
   const solvedTiles = useMemo(() => [...buildSolvedTiles(pieceCount), BLANK_TILE], [pieceCount]);
 
   const canStart =
@@ -199,11 +225,11 @@ const PlayPortal = ({
       return;
     }
 
-    const nextTiles = shuffleSlidingTiles(solvedTiles, gridSize);
+    const nextTiles = shuffleSlidingTiles(solvedTiles, rows, cols);
     setTiles(nextTiles);
     setStarted(false);
     setTimerLeft(Number(campaign?.timerSeconds) || 180);
-  }, [mode, campaign?.puzzleImage, campaign?.timerSeconds, solvedTiles, gridSize]);
+  }, [mode, campaign?.puzzleImage, campaign?.timerSeconds, solvedTiles, rows, cols]);
 
   const handleGoogleLogin = async () => {
     if (!companyId) {
@@ -281,7 +307,7 @@ const PlayPortal = ({
     }
     setMessage("");
     setError("");
-    const nextTiles = shuffleSlidingTiles(solvedTiles, gridSize);
+    const nextTiles = shuffleSlidingTiles(solvedTiles, rows, cols);
     setTiles(nextTiles);
     setTimerLeft(Number(campaign.timerSeconds) || 180);
     setStarted(true);
@@ -294,7 +320,7 @@ const PlayPortal = ({
 
     setTiles((previousTiles) => {
       const blankIndex = previousTiles.indexOf(BLANK_TILE);
-      if (blankIndex < 0 || !isAdjacent(tilePositionIndex, blankIndex, gridSize)) {
+      if (blankIndex < 0 || !isAdjacent(tilePositionIndex, blankIndex, cols)) {
         return previousTiles;
       }
 
@@ -494,7 +520,7 @@ const PlayPortal = ({
               <h3 className="text-xl font-black text-gray-900">Campaign Details</h3>
               <div className="mt-5 space-y-3 text-gray-700 font-semibold">
                 <p>
-                  Difficulty: {pieceCount} pieces (1 blank)
+                  Difficulty: {difficultyValue} blocks ({pieceCount} movable + 1 blank)
                 </p>
                 <p>Timer: {formatDuration(campaign?.timerSeconds || 180)}</p>
                 <p>Max Attempts: {campaign?.maxAttempts || 3}</p>
@@ -557,14 +583,14 @@ const PlayPortal = ({
                 <div className="mt-6 rounded-3xl border border-gray-100 bg-gray-50 p-4">
                   <div
                     className="grid gap-1 bg-white rounded-2xl border border-gray-100 p-2 mx-auto w-full max-w-[520px]"
-                    style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}
+                    style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
                   >
                     {tiles.map((tilePieceIndex, tilePositionIndex) => {
                       const isBlank = tilePieceIndex === BLANK_TILE;
-                      const row = Math.floor(tilePieceIndex / gridSize);
-                      const col = tilePieceIndex % gridSize;
-                      const bgX = gridSize > 1 ? (col / (gridSize - 1)) * 100 : 0;
-                      const bgY = gridSize > 1 ? (row / (gridSize - 1)) * 100 : 0;
+                      const row = Math.floor(tilePieceIndex / cols);
+                      const col = tilePieceIndex % cols;
+                      const bgX = cols > 1 ? (col / (cols - 1)) * 100 : 0;
+                      const bgY = rows > 1 ? (row / (rows - 1)) * 100 : 0;
 
                       return (
                         <button
@@ -578,7 +604,7 @@ const PlayPortal = ({
                             backgroundImage: isBlank ? "none" : `url(${campaign.puzzleImage})`,
                             backgroundSize: isBlank
                               ? undefined
-                              : `${gridSize * 100}% ${gridSize * 100}%`,
+                              : `${cols * 100}% ${rows * 100}%`,
                             backgroundPosition: isBlank ? undefined : `${bgX}% ${bgY}%`,
                             backgroundRepeat: isBlank ? undefined : "no-repeat",
                           }}
@@ -589,7 +615,7 @@ const PlayPortal = ({
                     })}
                   </div>
                   <p className="mt-3 text-sm font-semibold text-gray-500">
-                    Puzzle Difficulty: {pieceCount} pieces (1 blank move mode)
+                    Puzzle Difficulty: {difficultyValue} blocks ({pieceCount} movable + 1 blank)
                   </p>
                   <p className="mt-1 text-xs font-semibold text-gray-400">
                     Tap a tile next to blank area to move it.
@@ -616,7 +642,7 @@ const PlayPortal = ({
                     if (!started || attemptSaving) {
                       return;
                     }
-                    const nextTiles = shuffleSlidingTiles(solvedTiles, gridSize);
+                    const nextTiles = shuffleSlidingTiles(solvedTiles, rows, cols);
                     setTiles(nextTiles);
                     setTimerLeft(Number(campaign?.timerSeconds || 180));
                   }}
