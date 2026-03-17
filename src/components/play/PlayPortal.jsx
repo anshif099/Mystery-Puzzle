@@ -160,6 +160,9 @@ const PlayPortal = ({
     email: "",
   });
   const [tiles, setTiles] = useState([]);
+  const [rotation, setRotation] = useState(0);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [winner, setWinner] = useState(null);
   const touchStartRef = useRef(null);
 
   useEffect(() => {
@@ -449,12 +452,41 @@ const PlayPortal = ({
     touchStartRef.current = null;
   };
 
-  const submitAttempt = async (status, forcedTime) => {
+  const handleSpin = async () => {
+    if (!campaign || !campaign.items || campaign.items.length === 0 || isSpinning || userStats.count >= (Number(campaign.maxAttempts) || 1)) {
+      return;
+    }
+
+    const items = campaign.items;
+    const segmentAngle = 360 / items.length;
+    const randomIndex = Math.floor(Math.random() * items.length);
+    
+    // Calculate rotation: Current + 5 full circles (1800deg) + offset to land on segment center
+    // We want the pointer (usually at top, 0deg) to land on randomIndex.
+    // Index 0 is at 0 degrees, Index 1 at segmentAngle, etc.
+    // To land Index on top, we need to rotate by (360 - index * segmentAngle)
+    const extraSpins = 5;
+    const targetRotation = rotation + (360 * extraSpins) + (360 - (randomIndex * segmentAngle)) - (rotation % 360);
+    
+    setIsSpinning(true);
+    setRotation(targetRotation);
+    setWinner(null);
+
+    // Wait for animation (3 seconds)
+    setTimeout(() => {
+      setIsSpinning(false);
+      const wonItem = items[randomIndex];
+      setWinner(wonItem);
+      submitAttempt("solved", 0, wonItem.name); // Using forcedTime 0 for wheel
+    }, 4000);
+  };
+
+  const submitAttempt = async (status, forcedTime, prizeName = "") => {
     if (!user || !campaign || !companyId) {
       return;
     }
 
-    const maxAttempts = Number(campaign.maxAttempts) || 3;
+    const maxAttempts = Number(campaign.maxAttempts) || (type === "wheel" ? 1 : 3);
     if (userStats.count >= maxAttempts) {
       setError("Maximum attempts reached.");
       setStarted(false);
@@ -476,9 +508,12 @@ const PlayPortal = ({
         user,
         status,
         completionTimeSec,
+        prize: prizeName, // Adding prize to metadata
       });
       setStarted(false);
-      setMessage(status === "solved" ? "Puzzle solved and saved." : "Attempt saved.");
+      if (type === "puzzle") {
+        setMessage(status === "solved" ? "Puzzle solved and saved." : "Attempt saved.");
+      }
     } catch (attemptError) {
       setError(attemptError?.message || "Could not save attempt.");
     } finally {
@@ -746,17 +781,104 @@ const PlayPortal = ({
                   </div>
                 )
               ) : (
-                <div className="mt-6 rounded-[40px] bg-gray-900 overflow-hidden relative min-h-[400px] flex flex-col items-center justify-center text-center p-12">
-                   <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-mint via-sky-blue to-transparent animate-pulse"></div>
-                   <div className="relative z-10">
-                     <div className="w-24 h-24 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center text-4xl mb-6 mx-auto border border-white/20 animate-spin-slow">
-                       🎡
-                     </div>
-                     <h3 className="text-3xl font-black text-white mb-4">Spin-to-Win Coming Soon</h3>
-                     <p className="text-white/60 font-medium max-w-sm mx-auto">
-                       The wheel campaign is active, but the game interface is being finalized. Stay tuned!
-                     </p>
-                   </div>
+                <div className="mt-6 flex flex-col items-center">
+                  <div className="relative w-full max-w-[400px] aspect-square">
+                    {/* Wheel Outer Border */}
+                    <div className="absolute inset-0 rounded-full border-[12px] border-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.3)] z-10">
+                      {[...Array(24)].map((_, i) => (
+                        <div key={i} className="absolute w-2 h-2 bg-white rounded-full translate-x-1/2" style={{ left: 'calc(50% - 4px)', top: '-2px', transformOrigin: '4px calc(200px + 2px)', transform: `rotate(${i * 15}deg)` }}></div>
+                      ))}
+                    </div>
+
+                    {/* Pointer */}
+                    <div className="absolute top-[-10px] left-1/2 -translate-x-1/2 z-30 w-10 h-10">
+                      <div className="w-full h-full bg-white rounded-xl shadow-lg border-4 border-yellow-500 flex items-center justify-center rotate-45">
+                        <div className="w-4 h-4 bg-accent rounded-full"></div>
+                      </div>
+                    </div>
+
+                    {/* The Wheel */}
+                    <div 
+                      className="w-full h-full rounded-full overflow-hidden relative transition-transform duration-[4000ms] cubic-bezier-wheel"
+                      style={{ transform: `rotate(${rotation}deg)` }}
+                    >
+                      {campaign.items && campaign.items.length > 0 ? (
+                        campaign.items.map((item, index) => {
+                          const angle = 360 / campaign.items.length;
+                          const bgColors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEEAD", "#D4A5A5", "#9B59B6", "#34495E"];
+                          return (
+                            <div
+                              key={index}
+                              className="absolute top-0 right-0 w-1/2 h-1/2 origin-bottom-left"
+                              style={{
+                                transform: `rotate(${index * angle}deg) skewY(${(90 - angle)}deg)`,
+                                backgroundColor: bgColors[index % bgColors.length],
+                                border: '1px solid rgba(0,0,0,0.1)'
+                              }}
+                            >
+                              <div 
+                                className="absolute bottom-4 left-4 origin-bottom-left"
+                                style={{
+                                  transform: `skewY(${-(90 - angle)}deg) rotate(${angle/2}deg)`,
+                                  width: '100px',
+                                  textAlign: 'center'
+                                }}
+                              >
+                                <p className="text-[10px] font-black text-white uppercase tracking-tighter w-full overflow-hidden whitespace-nowrap">
+                                  {item.name}
+                                </p>
+                                {item.image && (
+                                  <img src={item.image} alt={item.name} className="w-10 h-10 mx-auto mt-1 rounded-full border-2 border-white/50 object-cover" />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 font-bold">
+                           No Items Set
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Central Spin Button */}
+                    <button
+                      onClick={handleSpin}
+                      disabled={isSpinning || userStats.count >= (Number(campaign.maxAttempts) || 1)}
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full bg-white shadow-2xl z-20 flex items-center justify-center group active:scale-95 transition-transform"
+                    >
+                      <div className="w-20 h-20 rounded-full border-4 border-gray-100 flex flex-col items-center justify-center p-2 group-hover:border-mint transition-colors">
+                        <span className="text-sm font-black text-gray-900 uppercase tracking-widest leading-none">Spin</span>
+                        {isSpinning && <Loader2 size={12} className="animate-spin mt-1 text-mint" />}
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Winner Popup */}
+                  {winner && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                       <div className="bg-white rounded-[40px] p-10 max-w-sm w-full text-center shadow-2xl animate-in zoom-in-95 duration-500">
+                          <div className="w-32 h-32 mx-auto mb-6 relative">
+                             <div className="absolute inset-0 bg-mint/20 rounded-full animate-ping"></div>
+                             <div className="relative w-full h-full rounded-full border-4 border-mint overflow-hidden bg-gray-50 flex items-center justify-center">
+                               {winner.image ? (
+                                 <img src={winner.image} alt={winner.name} className="w-full h-full object-cover" />
+                               ) : (
+                                 <span className="text-4xl text-mint">🎁</span>
+                               )}
+                             </div>
+                          </div>
+                          <h3 className="text-3xl font-black text-gray-900 uppercase">You Won!</h3>
+                          <p className="mt-2 text-xl font-bold text-mint">{winner.name}</p>
+                          <button 
+                            onClick={() => setWinner(null)}
+                            className="mt-8 w-full bg-gray-900 text-white py-4 rounded-2xl font-black hover:bg-gray-800 transition-colors"
+                          >
+                            Awesome!
+                          </button>
+                       </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -797,10 +919,11 @@ const PlayPortal = ({
                   </>
                 ) : (
                   <button
-                    disabled
-                    className="bg-gray-200 text-gray-400 px-8 py-4 rounded-2xl font-black cursor-not-allowed"
+                    onClick={handleSpin}
+                    disabled={isSpinning || userStats.count >= (Number(campaign?.maxAttempts) || 1)}
+                    className="bg-mint text-white px-8 py-4 rounded-2xl font-black disabled:opacity-60 shadow-lg shadow-mint/20 flex items-center gap-2"
                   >
-                    Spin Wheel (Coming Soon)
+                    {isSpinning ? "Wheeeeee!" : "Click to Spin"}
                   </button>
                 )}
               </div>

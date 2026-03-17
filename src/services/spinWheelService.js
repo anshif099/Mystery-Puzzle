@@ -31,6 +31,7 @@ const normalizeSpinWheel = (data, companyId, wheelId) => ({
   timerSeconds: Number(data?.timerSeconds) || 60,
   maxAttempts: Number(data?.maxAttempts) || 1,
   wheelKey: data?.wheelKey || "",
+  items: Array.isArray(data?.items) ? data.items : [],
   createdAt: Number(data?.createdAt) || Date.now(),
   updatedAt: Number(data?.updatedAt) || Date.now(),
 });

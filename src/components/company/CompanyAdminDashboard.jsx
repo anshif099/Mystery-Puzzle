@@ -57,9 +57,15 @@ const buildEmptyDraft = () => ({
 
 const buildEmptyWheelDraft = () => ({
   title: "",
-  timerMinutes: "1",
+  timerMinutes: "1", // Legacy/Hidden
   maxAttempts: "1",
   wheelKey: generateCampaignKey(),
+  items: [
+    { name: "Prize 1", image: "" },
+    { name: "Prize 2", image: "" },
+    { name: "Prize 3", image: "" },
+    { name: "Prize 4", image: "" },
+  ],
 });
 
 const toDraft = (campaign) =>
@@ -81,6 +87,12 @@ const toWheelDraft = (wheel) =>
         timerMinutes: String(Math.max(1, Math.round((wheel.timerSeconds || 60) / 60))),
         maxAttempts: String(wheel.maxAttempts || 1),
         wheelKey: wheel.wheelKey || generateCampaignKey(),
+        items: Array.isArray(wheel.items) ? [...wheel.items] : [
+          { name: "Prize 1", image: "" },
+          { name: "Prize 2", image: "" },
+          { name: "Prize 3", image: "" },
+          { name: "Prize 4", image: "" },
+        ],
       }
     : buildEmptyWheelDraft();
 
@@ -523,9 +535,10 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     try {
       const payload = {
         title: wheelDraft.title.trim() || (isEditing ? editingWheel?.title : `Wheel ${spinWheels.length + 1}`),
-        timerSeconds: Math.max(1, Number(wheelDraft.timerMinutes) || 1) * 60,
+        timerSeconds: 0, // No timer for spin wheels
         maxAttempts: Math.max(1, Number(wheelDraft.maxAttempts) || 1),
         wheelKey: (wheelDraft.wheelKey || generateCampaignKey()).trim().toUpperCase(),
+        items: wheelDraft.items || [],
         isActive: editingWheel?.isActive || false,
       };
       const saved = await saveSpinWheel(companyId, payload, editingSpinWheelId);
@@ -588,6 +601,38 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     navigator.clipboard.writeText(wheelLink);
     setMessage("Link copied to clipboard!");
     setTimeout(() => setMessage(""), 2000);
+  };
+
+  const handleAddItem = () => {
+    setWheelDraft(prev => ({
+      ...prev,
+      items: [...prev.items, { name: `Prize ${prev.items.length + 1}`, image: "" }]
+    }));
+  };
+
+  const handleRemoveItem = (index) => {
+    setWheelDraft(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleItemChange = (index, field, value) => {
+    setWheelDraft(prev => {
+      const nextItems = [...prev.items];
+      nextItems[index] = { ...nextItems[index], [field]: value };
+      return { ...prev, items: nextItems };
+    });
+  };
+
+  const handleItemImageUpload = (index, event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      handleItemChange(index, "image", String(reader.result || ""));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleEditCampaign = (nextCampaign) => {
@@ -1440,19 +1485,6 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
 
                       <div className="space-y-2">
                         <label className="text-xs font-black uppercase tracking-widest text-gray-500">
-                          Timer (Minutes)
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={wheelDraft.timerMinutes}
-                          onChange={(e) => handleWheelDraftChange("timerMinutes", e.target.value)}
-                          className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-gray-500">
                           Max Attempts
                         </label>
                         <input
@@ -1464,7 +1496,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                         />
                       </div>
 
-                      <div className="space-y-2 md:col-span-2">
+                      <div className="space-y-2">
                         <label className="text-xs font-black uppercase tracking-widest text-gray-500">
                           Wheel Key
                         </label>
@@ -1476,7 +1508,55 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                         />
                       </div>
 
-                      <div className="md:col-span-2 pt-2">
+                      <div className="md:col-span-2 space-y-4 pt-4 border-t border-gray-100">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-black uppercase tracking-widest text-gray-700">
+                            Wheel Items ({wheelDraft.items.length})
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleAddItem}
+                            className="text-mint font-black text-xs uppercase tracking-wider hover:underline"
+                          >
+                            + Add Item
+                          </button>
+                        </div>
+
+                        <div className="grid gap-3">
+                          {wheelDraft.items.map((item, index) => (
+                            <div key={index} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100/50 flex flex-wrap md:flex-nowrap items-start gap-4">
+                              <div className="shrink-0">
+                                <label className="w-16 h-16 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-100 overflow-hidden bg-white">
+                                  {item.image ? (
+                                    <img src={item.image} alt="Prize" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <UploadCloud size={16} className="text-gray-400" />
+                                  )}
+                                  <input type="file" accept="image/*" onChange={(e) => handleItemImageUpload(index, e)} className="hidden" />
+                                </label>
+                              </div>
+                              <div className="flex-1 min-w-[200px]">
+                                <input
+                                  type="text"
+                                  value={item.name}
+                                  placeholder="Prize name"
+                                  onChange={(e) => handleItemChange(index, "name", e.target.value)}
+                                  className="w-full bg-transparent p-2 border-b border-gray-200 outline-none focus:border-mint font-bold"
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItem(index)}
+                                className="p-2 text-accent/40 hover:text-accent"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="md:col-span-2 pt-6">
                         <button
                           onClick={handleSaveSpinWheel}
                           disabled={saving}
