@@ -268,7 +268,7 @@ const CompanyManagement = () => {
       )}
 
       <div className="bg-white rounded-[40px] shadow-sm border border-gray-50 overflow-hidden overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[900px]">
+        <table className="w-full text-left border-collapse min-w-[1100px]">
           <thead>
             <tr className="bg-gray-50/50">
               <th className="px-8 py-6 text-sm font-black text-gray-600 uppercase tracking-widest">
@@ -279,6 +279,9 @@ const CompanyManagement = () => {
               </th>
               <th className="px-8 py-6 text-sm font-black text-gray-600 uppercase tracking-widest">
                 Email
+              </th>
+              <th className="px-8 py-6 text-sm font-black text-gray-600 uppercase tracking-widest">
+                Password
               </th>
               <th className="px-8 py-6 text-sm font-black text-gray-600 uppercase tracking-widest">
                 Campaigns
@@ -294,7 +297,7 @@ const CompanyManagement = () => {
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <tr>
-                <td colSpan="6" className="px-8 py-10 text-center text-gray-500 font-semibold">
+                <td colSpan="7" className="px-8 py-10 text-center text-gray-500 font-semibold">
                   <span className="inline-flex items-center gap-2">
                     <Loader2 size={18} className="animate-spin" />
                     Loading company admins...
@@ -303,7 +306,7 @@ const CompanyManagement = () => {
               </tr>
             ) : companies.length === 0 ? (
               <tr>
-                <td colSpan="6" className="px-8 py-10 text-center text-gray-400 font-semibold">
+                <td colSpan="7" className="px-8 py-10 text-center text-gray-400 font-semibold">
                   No company admins found. Create one to get started.
                 </td>
               </tr>
@@ -313,6 +316,9 @@ const CompanyManagement = () => {
                   <td className="px-8 py-6 font-bold text-gray-800">{company.name}</td>
                   <td className="px-8 py-6 font-medium text-gray-600">{company.admin}</td>
                   <td className="px-8 py-6 font-medium text-gray-600">{company.email}</td>
+                  <td className="px-8 py-6 font-mono text-sm font-semibold text-gray-700">
+                    {company.password || "--"}
+                  </td>
                   <td className="px-8 py-6">
                     <span className="bg-sky-blue/10 text-sky-blue px-3 py-1 rounded-full font-black text-xs">
                       {company.campaigns}
