@@ -21,10 +21,10 @@ Company Admin records now use internet storage so data appears on any device aft
 
 1. Copy `.env.example` to `.env`.
 2. Keep the provided `VITE_FIREBASE_*` values (or replace with your own Firebase project values).
-3. In Firebase Console, enable **Cloud Firestore** for project `mystery-9918e`.
-4. Set Firestore rules to allow your admin app to read/write company admins.
+3. In Firebase Console, enable **Realtime Database** for project `mystery-9918e`.
+4. Set Realtime Database rules to allow your admin app to read/write company admins.
 5. Restart the app after changing environment variables.
 
-Collection used by the app:
+Path used by the app:
 
 - `companyAdmins`

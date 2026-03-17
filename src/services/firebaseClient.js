@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore/lite";
+import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCheXluwKdWjpLqXPkVF-I0S_lhtN-7Mb0",
@@ -10,9 +10,12 @@ const firebaseConfig = {
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "649384039257",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:649384039257:web:6d813590ff67edf17a7248",
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-2B6PS5BYE9",
+  databaseURL:
+    import.meta.env.VITE_FIREBASE_DATABASE_URL ||
+    "https://mystery-9918e-default-rtdb.firebaseio.com",
 };
 
-const requiredFields = ["apiKey", "authDomain", "projectId", "appId"];
+const requiredFields = ["apiKey", "authDomain", "projectId", "appId", "databaseURL"];
 
 export const firebaseConfigured = requiredFields.every(
   (field) => Boolean(firebaseConfig[field])
@@ -24,4 +27,4 @@ const app = firebaseConfigured
     : initializeApp(firebaseConfig)
   : null;
 
-export const firestoreDb = app ? getFirestore(app) : null;
+export const realtimeDb = app ? getDatabase(app) : null;

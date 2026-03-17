@@ -1,16 +1,18 @@
-import {
-  addDoc,
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  updateDoc,
-} from "firebase/firestore/lite";
-import { firebaseConfigured, firestoreDb } from "./firebaseClient";
+import { get, push, ref, remove, update } from "firebase/database";
+import { firebaseConfigured, realtimeDb } from "./firebaseClient";
 
 const COLLECTION_NAME = "companyAdmins";
 const cacheKey = "company_admins_cache_v1";
 const REQUEST_TIMEOUT_MS = 15000;
+
+const toTimestamp = (value) => {
+  if (Number.isFinite(Number(value))) {
+    return Number(value);
+  }
+
+  const parsed = Date.parse(value || "");
+  return Number.isFinite(parsed) ? parsed : Date.now();
+};
 
 const sanitizeCompany = (data, id) => ({
   id,
@@ -22,9 +24,7 @@ const sanitizeCompany = (data, id) => ({
     ? Number(data.campaigns)
     : 0,
   status: data?.status === "Disabled" ? "Disabled" : "Active",
-  createdAt: Number.isFinite(Number(data?.createdAt))
-    ? Number(data.createdAt)
-    : Date.now(),
+  createdAt: toTimestamp(data?.createdAt),
 });
 
 const sortByLatest = (rows) =>
@@ -48,9 +48,9 @@ const readCache = () => {
   }
 };
 
-const ensureFirestore = () => {
-  if (!firebaseConfigured || !firestoreDb) {
-    throw new Error("Firebase is not configured.");
+const ensureRealtimeDb = () => {
+  if (!firebaseConfigured || !realtimeDb) {
+    throw new Error("Firebase Realtime Database is not configured.");
   }
 };
 
@@ -68,22 +68,23 @@ const withTimeout = async (promise, message) => {
 };
 
 export const getCompanyAdmins = async () => {
-  ensureFirestore();
+  ensureRealtimeDb();
 
   const snapshot = await withTimeout(
-    getDocs(collection(firestoreDb, COLLECTION_NAME)),
+    get(ref(realtimeDb, COLLECTION_NAME)),
     "Request timed out while loading company admins."
   );
-  const rows = snapshot.docs.map((item) =>
-    sanitizeCompany(item.data(), item.id)
-  );
+  const raw = snapshot.val();
+  const rows = raw
+    ? Object.entries(raw).map(([id, item]) => sanitizeCompany(item, id))
+    : [];
   const sorted = sortByLatest(rows);
   saveCache(sorted);
   return sorted;
 };
 
 export const createCompanyAdmin = async (payload) => {
-  ensureFirestore();
+  ensureRealtimeDb();
 
   const record = {
     ...payload,
@@ -92,29 +93,33 @@ export const createCompanyAdmin = async (payload) => {
     createdAt: Date.now(),
   };
 
-  const createdRef = await withTimeout(
-    addDoc(collection(firestoreDb, COLLECTION_NAME), record),
+  const createdRef = push(ref(realtimeDb, COLLECTION_NAME));
+  await withTimeout(
+    update(createdRef, record),
     "Request timed out while creating company admin."
   );
-  const created = sanitizeCompany(record, createdRef.id);
+
+  const created = sanitizeCompany(record, createdRef.key);
   const next = sortByLatest([created, ...readCache()]);
   saveCache(next);
   return created;
 };
 
 export const updateCompanyAdmin = async (id, payload) => {
-  ensureFirestore();
+  ensureRealtimeDb();
 
   const body = {
     ...payload,
     campaigns: Number(payload.campaigns || 0),
     status: payload.status === "Disabled" ? "Disabled" : "Active",
+    createdAt: toTimestamp(payload.createdAt),
   };
 
   await withTimeout(
-    updateDoc(doc(firestoreDb, COLLECTION_NAME, id), body),
+    update(ref(realtimeDb, `${COLLECTION_NAME}/${id}`), body),
     "Request timed out while updating company admin."
   );
+
   const updated = sanitizeCompany(body, id);
   const next = readCache().map((row) => (row.id === id ? updated : row));
   saveCache(next);
@@ -122,10 +127,10 @@ export const updateCompanyAdmin = async (id, payload) => {
 };
 
 export const deleteCompanyAdmin = async (id) => {
-  ensureFirestore();
+  ensureRealtimeDb();
 
   await withTimeout(
-    deleteDoc(doc(firestoreDb, COLLECTION_NAME, id)),
+    remove(ref(realtimeDb, `${COLLECTION_NAME}/${id}`)),
     "Request timed out while deleting company admin."
   );
   const next = readCache().filter((row) => row.id !== id);

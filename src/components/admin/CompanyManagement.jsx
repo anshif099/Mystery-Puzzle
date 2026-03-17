@@ -89,7 +89,7 @@ const CompanyManagement = () => {
       setPageError(
         cachedRows.length
           ? `Cloud sync failed${details}. Showing locally cached records.`
-          : `Cloud sync failed${details}. Please check internet and Firebase rules.`
+          : `Cloud sync failed${details}. Please check internet and Realtime Database rules.`
       );
     } finally {
       setLoading(false);
@@ -153,7 +153,7 @@ const CompanyManagement = () => {
           status: formData.status,
           password:
             formData.password.trim() || existing?.password || "",
-          createdAt: existing?.createdAt || new Date().toISOString(),
+          createdAt: existing?.createdAt || Date.now(),
         };
 
         const updated = await updateCompanyAdmin(editingId, payload);
