@@ -1600,7 +1600,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                                 </div>
                                 <p className="mt-1 text-xs font-mono text-gray-500">ID: {wheel.wheelId}</p>
                                 <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                  <SummaryCard label="Timer" value={`${Math.round(wheel.timerSeconds / 60)}m`} />
+                                  <SummaryCard label="Items" value={wheel.items?.length || 0} />
                                   <SummaryCard label="Max Attempts" value={wheel.maxAttempts} />
                                   <SummaryCard label="Key" value={wheel.wheelKey} />
                                 </div>
