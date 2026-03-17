@@ -81,13 +81,15 @@ const CompanyManagement = () => {
     try {
       const rows = await getCompanyAdmins();
       setCompanies(rows);
-    } catch {
+    } catch (error) {
       const cachedRows = getCompanyAdminsCached();
       setCompanies(cachedRows);
+      const details =
+        typeof error?.message === "string" ? ` (${error.message})` : "";
       setPageError(
         cachedRows.length
-          ? "Cloud sync failed. Showing locally cached records."
-          : "Cloud sync failed. Please check your internet connection and API configuration."
+          ? `Cloud sync failed${details}. Showing locally cached records.`
+          : `Cloud sync failed${details}. Please check internet and Firebase rules.`
       );
     } finally {
       setLoading(false);
@@ -174,11 +176,13 @@ const CompanyManagement = () => {
 
       closeModal();
       setPageError("");
-    } catch {
+    } catch (error) {
+      const details =
+        typeof error?.message === "string" ? ` (${error.message})` : "";
       setFormError(
         isEditMode
-          ? "Update failed. Please try again."
-          : "Create failed. Please try again."
+          ? `Update failed${details}.`
+          : `Create failed${details}.`
       );
     } finally {
       setSaving(false);
@@ -203,8 +207,10 @@ const CompanyManagement = () => {
 
       await deleteCompanyAdmin(company.id);
       setCompanies((prev) => prev.filter((item) => item.id !== company.id));
-    } catch {
-      setPageError("Delete failed. Please try again.");
+    } catch (error) {
+      const details =
+        typeof error?.message === "string" ? ` (${error.message})` : "";
+      setPageError(`Delete failed${details}.`);
     }
   };
 
@@ -229,8 +235,10 @@ const CompanyManagement = () => {
           item.id === company.id ? { ...item, ...updated } : item
         )
       );
-    } catch {
-      setPageError("Status update failed. Please try again.");
+    } catch (error) {
+      const details =
+        typeof error?.message === "string" ? ` (${error.message})` : "";
+      setPageError(`Status update failed${details}.`);
     }
   };
 

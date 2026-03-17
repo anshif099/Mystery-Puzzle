@@ -5,11 +5,12 @@ import {
   doc,
   getDocs,
   updateDoc,
-} from "firebase/firestore";
+} from "firebase/firestore/lite";
 import { firebaseConfigured, firestoreDb } from "./firebaseClient";
 
 const COLLECTION_NAME = "companyAdmins";
 const cacheKey = "company_admins_cache_v1";
+const REQUEST_TIMEOUT_MS = 15000;
 
 const sanitizeCompany = (data, id) => ({
   id,
@@ -53,10 +54,26 @@ const ensureFirestore = () => {
   }
 };
 
+const withTimeout = async (promise, message) => {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), REQUEST_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 export const getCompanyAdmins = async () => {
   ensureFirestore();
 
-  const snapshot = await getDocs(collection(firestoreDb, COLLECTION_NAME));
+  const snapshot = await withTimeout(
+    getDocs(collection(firestoreDb, COLLECTION_NAME)),
+    "Request timed out while loading company admins."
+  );
   const rows = snapshot.docs.map((item) =>
     sanitizeCompany(item.data(), item.id)
   );
@@ -75,7 +92,10 @@ export const createCompanyAdmin = async (payload) => {
     createdAt: Date.now(),
   };
 
-  const createdRef = await addDoc(collection(firestoreDb, COLLECTION_NAME), record);
+  const createdRef = await withTimeout(
+    addDoc(collection(firestoreDb, COLLECTION_NAME), record),
+    "Request timed out while creating company admin."
+  );
   const created = sanitizeCompany(record, createdRef.id);
   const next = sortByLatest([created, ...readCache()]);
   saveCache(next);
@@ -91,7 +111,10 @@ export const updateCompanyAdmin = async (id, payload) => {
     status: payload.status === "Disabled" ? "Disabled" : "Active",
   };
 
-  await updateDoc(doc(firestoreDb, COLLECTION_NAME, id), body);
+  await withTimeout(
+    updateDoc(doc(firestoreDb, COLLECTION_NAME, id), body),
+    "Request timed out while updating company admin."
+  );
   const updated = sanitizeCompany(body, id);
   const next = readCache().map((row) => (row.id === id ? updated : row));
   saveCache(next);
@@ -101,7 +124,10 @@ export const updateCompanyAdmin = async (id, payload) => {
 export const deleteCompanyAdmin = async (id) => {
   ensureFirestore();
 
-  await deleteDoc(doc(firestoreDb, COLLECTION_NAME, id));
+  await withTimeout(
+    deleteDoc(doc(firestoreDb, COLLECTION_NAME, id)),
+    "Request timed out while deleting company admin."
+  );
   const next = readCache().filter((row) => row.id !== id);
   saveCache(next);
 };
