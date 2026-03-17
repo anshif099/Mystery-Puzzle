@@ -134,6 +134,8 @@ const shuffleSlidingTiles = (solvedTiles, rows, cols) => {
 };
 
 const PlayPortal = ({
+  companyId,
+  campaignId,
   campaignKey,
   type = "puzzle",
   session,
