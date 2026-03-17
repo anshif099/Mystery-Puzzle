@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Loader2, LogOut } from "lucide-react";
 import {
   buildLeaderboard,
@@ -22,6 +22,7 @@ const DIFFICULTY_LAYOUTS = {
   24: { rows: 4, cols: 6 },
 };
 const DEFAULT_DIFFICULTY = 16;
+const SWIPE_THRESHOLD_PX = 24;
 
 const buildSolvedTiles = (pieceCount) =>
   Array.from({ length: pieceCount }, (_, index) => index);
@@ -65,6 +66,38 @@ const isAdjacent = (first, second, cols) => {
   const secondRow = Math.floor(second / cols);
   const secondCol = second % cols;
   return Math.abs(firstRow - secondRow) + Math.abs(firstCol - secondCol) === 1;
+};
+
+const getSwipeDirection = (deltaX, deltaY) => {
+  if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < SWIPE_THRESHOLD_PX) {
+    return null;
+  }
+
+  if (Math.abs(deltaX) > Math.abs(deltaY)) {
+    return deltaX > 0 ? "right" : "left";
+  }
+
+  return deltaY > 0 ? "down" : "up";
+};
+
+const canMoveBySwipeDirection = (tileIndex, blankIndex, direction, cols) => {
+  const tileRow = Math.floor(tileIndex / cols);
+  const tileCol = tileIndex % cols;
+  const blankRow = Math.floor(blankIndex / cols);
+  const blankCol = blankIndex % cols;
+
+  switch (direction) {
+    case "up":
+      return blankRow === tileRow - 1 && blankCol === tileCol;
+    case "down":
+      return blankRow === tileRow + 1 && blankCol === tileCol;
+    case "left":
+      return blankCol === tileCol - 1 && blankRow === tileRow;
+    case "right":
+      return blankCol === tileCol + 1 && blankRow === tileRow;
+    default:
+      return false;
+  }
 };
 
 const shuffleSlidingTiles = (solvedTiles, rows, cols) => {
@@ -122,6 +155,7 @@ const PlayPortal = ({
     email: "",
   });
   const [tiles, setTiles] = useState([]);
+  const touchStartRef = useRef(null);
 
   useEffect(() => {
     if (!companyId) {
@@ -313,14 +347,18 @@ const PlayPortal = ({
     setStarted(true);
   };
 
-  const handleTileTap = (tilePositionIndex) => {
+  const handleTileMove = (tilePositionIndex, swipeDirection = null) => {
     if (!started || attemptSaving || userStats.solved) {
       return;
     }
 
     setTiles((previousTiles) => {
       const blankIndex = previousTiles.indexOf(BLANK_TILE);
-      if (blankIndex < 0 || !isAdjacent(tilePositionIndex, blankIndex, cols)) {
+      const canMove = swipeDirection
+        ? canMoveBySwipeDirection(tilePositionIndex, blankIndex, swipeDirection, cols)
+        : isAdjacent(tilePositionIndex, blankIndex, cols);
+
+      if (blankIndex < 0 || !canMove) {
         return previousTiles;
       }
 
@@ -342,6 +380,48 @@ const PlayPortal = ({
 
       return nextTiles;
     });
+  };
+
+  const handleTileTap = (tilePositionIndex) => {
+    handleTileMove(tilePositionIndex);
+  };
+
+  const handleTileTouchStart = (tilePositionIndex, event) => {
+    const touch = event.touches?.[0];
+    if (!touch) {
+      return;
+    }
+
+    touchStartRef.current = {
+      tilePositionIndex,
+      x: touch.clientX,
+      y: touch.clientY,
+    };
+  };
+
+  const handleTileTouchEnd = (tilePositionIndex, event) => {
+    const startTouch = touchStartRef.current;
+    touchStartRef.current = null;
+
+    const endTouch = event.changedTouches?.[0];
+    if (!startTouch || !endTouch || startTouch.tilePositionIndex !== tilePositionIndex) {
+      return;
+    }
+
+    const swipeDirection = getSwipeDirection(
+      endTouch.clientX - startTouch.x,
+      endTouch.clientY - startTouch.y
+    );
+
+    if (!swipeDirection) {
+      return;
+    }
+
+    handleTileMove(tilePositionIndex, swipeDirection);
+  };
+
+  const handleTileTouchCancel = () => {
+    touchStartRef.current = null;
   };
 
   const submitAttempt = async (status, forcedTime) => {
@@ -597,6 +677,9 @@ const PlayPortal = ({
                           key={`${tilePieceIndex}-${tilePositionIndex}`}
                           type="button"
                           onClick={() => handleTileTap(tilePositionIndex)}
+                          onTouchStart={(event) => handleTileTouchStart(tilePositionIndex, event)}
+                          onTouchEnd={(event) => handleTileTouchEnd(tilePositionIndex, event)}
+                          onTouchCancel={handleTileTouchCancel}
                           className={`aspect-square rounded-lg border transition-all ${
                             isBlank ? "bg-white border-gray-200" : "border-white/70"
                           }`}
@@ -607,6 +690,7 @@ const PlayPortal = ({
                               : `${cols * 100}% ${rows * 100}%`,
                             backgroundPosition: isBlank ? undefined : `${bgX}% ${bgY}%`,
                             backgroundRepeat: isBlank ? undefined : "no-repeat",
+                            touchAction: isBlank ? "auto" : "none",
                           }}
                           disabled={isBlank}
                           aria-label={`Puzzle tile ${tilePositionIndex + 1}`}
@@ -618,7 +702,7 @@ const PlayPortal = ({
                     Puzzle Difficulty: {difficultyValue} blocks ({pieceCount} movable + 1 blank)
                   </p>
                   <p className="mt-1 text-xs font-semibold text-gray-400">
-                    Tap a tile next to blank area to move it.
+                    Tap or swipe a tile toward the blank area to move it.
                   </p>
                 </div>
               ) : (
