@@ -12,6 +12,10 @@ import {
   subscribeUsers,
   validatePlayAccess,
 } from "../../services/challengeService";
+import {
+  subscribeSpinWheel,
+  validateWheelAccess,
+} from "../../services/spinWheelService";
 import { clearSession } from "../../services/session";
 
 const BLANK_TILE = -1;
@@ -130,9 +134,8 @@ const shuffleSlidingTiles = (solvedTiles, rows, cols) => {
 };
 
 const PlayPortal = ({
-  companyId,
-  campaignId,
   campaignKey,
+  type = "puzzle",
   session,
   onUserSession,
   onNavigateHome,
@@ -174,13 +177,22 @@ const PlayPortal = ({
     let unsubUsers = () => {};
     let unsubAttempts = () => {};
 
-    validatePlayAccess({ companyId, campaignId, campaignKey })
+    const validator = type === "wheel" ? validateWheelAccess : validatePlayAccess;
+    const subscriber = type === "wheel" ? subscribeSpinWheel : subscribeCampaign;
+
+    validator({ 
+      companyId, 
+      campaignId, 
+      campaignKey, 
+      wheelId: campaignId, 
+      wheelKey: campaignKey 
+    })
       .then(({ company: companyProfile, campaign: campaignConfig }) => {
-        const resolvedCampaignId = campaignConfig?.campaignId || campaignId || "";
+        const resolvedId = campaignConfig?.campaignId || campaignConfig?.wheelId || campaignId || "";
         setCompany(companyProfile);
         setCampaign(campaignConfig);
-        setActiveCampaignId(resolvedCampaignId);
-        setTimerLeft(Number(campaignConfig?.timerSeconds) || 180);
+        setActiveCampaignId(resolvedId);
+        setTimerLeft(Number(campaignConfig?.timerSeconds) || (type === "wheel" ? 60 : 180));
 
         if (session?.role === "user" && session.companyId === companyId && session.userId) {
           setUser({
@@ -193,8 +205,8 @@ const PlayPortal = ({
           setMode("game");
         }
 
-        unsubCampaign = subscribeCampaign(companyId, resolvedCampaignId, (nextCampaign) => {
-          setCampaign(nextCampaign);
+        unsubCampaign = subscriber(companyId, resolvedId, (next) => {
+          setCampaign(next);
         });
         unsubUsers = subscribeUsers(companyId, (rows) => setUsers(rows));
         unsubAttempts = subscribeAttempts(companyId, (rows) => setAttempts(rows));
@@ -263,7 +275,7 @@ const PlayPortal = ({
     Boolean(user) &&
     userStats.count < Number(campaign?.maxAttempts || 3) &&
     !userStats.solved &&
-    Boolean(campaign?.puzzleImage);
+    (type === "wheel" || Boolean(campaign?.puzzleImage));
 
   useEffect(() => {
     if (mode !== "game" || !campaign?.puzzleImage) {
@@ -625,12 +637,18 @@ const PlayPortal = ({
                   </span>
                 </p>
               </div>
-              {campaign?.puzzleImage && (
+              {type === "puzzle" && campaign?.puzzleImage && (
                 <img
                   src={campaign.puzzleImage}
                   alt="Puzzle logo preview"
                   className="mt-5 w-full max-h-72 object-contain rounded-2xl bg-gray-50 border border-gray-100"
                 />
+              )}
+              {type === "wheel" && (
+                <div className="mt-5 bg-gray-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center border border-gray-100 italic font-medium text-gray-400">
+                  <div className="text-4xl mb-3">🎡</div>
+                  Spin Wheel Experience Coming Soon
+                </div>
               )}
             </div>
           </div>
@@ -639,9 +657,11 @@ const PlayPortal = ({
             <div className="xl:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
               <div className="flex justify-between gap-3 items-start flex-wrap">
                 <div>
-                  <h2 className="text-2xl font-black text-gray-900">Puzzle Game</h2>
+                  <h2 className="text-2xl font-black text-gray-900">
+                    {type === "wheel" ? "Spin Wheel" : "Puzzle Game"}
+                  </h2>
                   <p className="text-gray-500 font-medium mt-2">
-                    Welcome, {user?.name}. Solve within time for top rank.
+                    Welcome, {user?.name}. {type === "wheel" ? "Try your luck!" : "Solve within time for top rank."}
                   </p>
                 </div>
                 <button
@@ -662,101 +682,127 @@ const PlayPortal = ({
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-xs font-black uppercase text-gray-500">Attempts Used</p>
                   <p className="text-3xl font-black text-gray-900 mt-2">
-                    {userStats.count}/{campaign?.maxAttempts || 3}
+                    {userStats.count}/{campaign?.maxAttempts || (type === "wheel" ? 1 : 3)}
                   </p>
                 </div>
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-xs font-black uppercase text-gray-500">Result</p>
                   <p className="text-3xl font-black text-gray-900 mt-2">
-                    {userStats.solved ? "Solved" : "Pending"}
+                    {userStats.solved ? "Great!" : "Ready"}
                   </p>
                 </div>
               </div>
 
-              {campaign?.puzzleImage ? (
-                <div className="mt-6 rounded-3xl border border-gray-100 bg-gray-50 p-4">
-                  <div
-                    className="grid gap-1 bg-white rounded-2xl border border-gray-100 p-2 mx-auto w-full max-w-[520px]"
-                    style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-                  >
-                    {tiles.map((tilePieceIndex, tilePositionIndex) => {
-                      const isBlank = tilePieceIndex === BLANK_TILE;
-                      const row = Math.floor(tilePieceIndex / cols);
-                      const col = tilePieceIndex % cols;
-                      const bgX = cols > 1 ? (col / (cols - 1)) * 100 : 0;
-                      const bgY = rows > 1 ? (row / (rows - 1)) * 100 : 0;
+              {type === "puzzle" ? (
+                campaign?.puzzleImage ? (
+                  <div className="mt-6 rounded-3xl border border-gray-100 bg-gray-50 p-4">
+                    <div
+                      className="grid gap-1 bg-white rounded-2xl border border-gray-100 p-2 mx-auto w-full max-w-[520px]"
+                      style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+                    >
+                      {tiles.map((tilePieceIndex, tilePositionIndex) => {
+                        const isBlank = tilePieceIndex === BLANK_TILE;
+                        const row = Math.floor(tilePieceIndex / cols);
+                        const col = tilePieceIndex % cols;
+                        const bgX = cols > 1 ? (col / (cols - 1)) * 100 : 0;
+                        const bgY = rows > 1 ? (row / (rows - 1)) * 100 : 0;
 
-                      return (
-                        <button
-                          key={`${tilePieceIndex}-${tilePositionIndex}`}
-                          type="button"
-                          onClick={() => handleTileTap(tilePositionIndex)}
-                          onTouchStart={(event) => handleTileTouchStart(tilePositionIndex, event)}
-                          onTouchEnd={(event) => handleTileTouchEnd(tilePositionIndex, event)}
-                          onTouchCancel={handleTileTouchCancel}
-                          className={`aspect-square rounded-lg border transition-all ${
-                            isBlank ? "bg-white border-gray-200" : "border-white/70"
-                          }`}
-                          style={{
-                            backgroundImage: isBlank ? "none" : `url(${campaign.puzzleImage})`,
-                            backgroundSize: isBlank
-                              ? undefined
-                              : `${cols * 100}% ${rows * 100}%`,
-                            backgroundPosition: isBlank ? undefined : `${bgX}% ${bgY}%`,
-                            backgroundRepeat: isBlank ? undefined : "no-repeat",
-                            touchAction: isBlank ? "auto" : "none",
-                          }}
-                          disabled={isBlank}
-                          aria-label={`Puzzle tile ${tilePositionIndex + 1}`}
-                        />
-                      );
-                    })}
+                        return (
+                          <button
+                            key={`${tilePieceIndex}-${tilePositionIndex}`}
+                            type="button"
+                            onClick={() => handleTileTap(tilePositionIndex)}
+                            onTouchStart={(event) => handleTileTouchStart(tilePositionIndex, event)}
+                            onTouchEnd={(event) => handleTileTouchEnd(tilePositionIndex, event)}
+                            onTouchCancel={handleTileTouchCancel}
+                            className={`aspect-square rounded-lg border transition-all ${
+                              isBlank ? "bg-white border-gray-200" : "border-white/70"
+                            }`}
+                            style={{
+                              backgroundImage: isBlank ? "none" : `url(${campaign.puzzleImage})`,
+                              backgroundSize: isBlank
+                                ? undefined
+                                : `${cols * 100}% ${rows * 100}%`,
+                              backgroundPosition: isBlank ? undefined : `${bgX}% ${bgY}%`,
+                              backgroundRepeat: isBlank ? undefined : "no-repeat",
+                              touchAction: isBlank ? "auto" : "none",
+                            }}
+                            disabled={isBlank}
+                            aria-label={`Puzzle tile ${tilePositionIndex + 1}`}
+                          />
+                        );
+                      })}
+                    </div>
+                    <p className="mt-3 text-sm font-semibold text-gray-500">
+                      Puzzle Difficulty: {difficultyValue} blocks ({pieceCount} movable + 1 blank)
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-gray-400">
+                      Tap or swipe a tile toward the blank area to move it.
+                    </p>
                   </div>
-                  <p className="mt-3 text-sm font-semibold text-gray-500">
-                    Puzzle Difficulty: {difficultyValue} blocks ({pieceCount} movable + 1 blank)
-                  </p>
-                  <p className="mt-1 text-xs font-semibold text-gray-400">
-                    Tap or swipe a tile toward the blank area to move it.
-                  </p>
-                </div>
+                ) : (
+                  <div className="mt-6 rounded-3xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center text-gray-400 font-semibold">
+                    Company has not uploaded a puzzle image yet.
+                  </div>
+                )
               ) : (
-                <div className="mt-6 rounded-3xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center text-gray-400 font-semibold">
-                  Company has not uploaded a puzzle image yet.
+                <div className="mt-6 rounded-[40px] bg-gray-900 overflow-hidden relative min-h-[400px] flex flex-col items-center justify-center text-center p-12">
+                   <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-mint via-sky-blue to-transparent animate-pulse"></div>
+                   <div className="relative z-10">
+                     <div className="w-24 h-24 bg-white/10 backdrop-blur-xl rounded-full flex items-center justify-center text-4xl mb-6 mx-auto border border-white/20 animate-spin-slow">
+                       🎡
+                     </div>
+                     <h3 className="text-3xl font-black text-white mb-4">Spin-to-Win Coming Soon</h3>
+                     <p className="text-white/60 font-medium max-w-sm mx-auto">
+                       The wheel campaign is active, but the game interface is being finalized. Stay tuned!
+                     </p>
+                   </div>
                 </div>
               )}
 
               <div className="mt-6 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={handleStartPuzzle}
-                  disabled={!canStart || started || attemptSaving}
-                  className="bg-sky-blue text-white px-5 py-3 rounded-2xl font-black disabled:opacity-60"
-                >
-                  {started ? "Puzzle Running..." : "Start Puzzle"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!started || attemptSaving) {
-                      return;
-                    }
-                    const nextTiles = shuffleSlidingTiles(solvedTiles, rows, cols);
-                    setTiles(nextTiles);
-                    setTimerLeft(Number(campaign?.timerSeconds || 180));
-                  }}
-                  disabled={!canStart || attemptSaving}
-                  className="bg-mint text-white px-5 py-3 rounded-2xl font-black disabled:opacity-60"
-                >
-                  Shuffle Again
-                </button>
-                <button
-                  type="button"
-                  onClick={() => submitAttempt("failed")}
-                  disabled={!started || attemptSaving}
-                  className="bg-accent text-white px-5 py-3 rounded-2xl font-black disabled:opacity-60"
-                >
-                  Submit Failed Attempt
-                </button>
+                {type === "puzzle" ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleStartPuzzle}
+                      disabled={!canStart || started || attemptSaving}
+                      className="bg-sky-blue text-white px-5 py-3 rounded-2xl font-black disabled:opacity-60"
+                    >
+                      {started ? "Puzzle Running..." : "Start Puzzle"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!started || attemptSaving) {
+                          return;
+                        }
+                        const nextTiles = shuffleSlidingTiles(solvedTiles, rows, cols);
+                        setTiles(nextTiles);
+                        setTimerLeft(Number(campaign?.timerSeconds || 180));
+                      }}
+                      disabled={!canStart || attemptSaving}
+                      className="bg-mint text-white px-5 py-3 rounded-2xl font-black disabled:opacity-60"
+                    >
+                      Shuffle Again
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => submitAttempt("failed")}
+                      disabled={!started || attemptSaving}
+                      className="bg-accent text-white px-5 py-3 rounded-2xl font-black disabled:opacity-60"
+                    >
+                      Submit Failed Attempt
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    disabled
+                    className="bg-gray-200 text-gray-400 px-8 py-4 rounded-2xl font-black cursor-not-allowed"
+                  >
+                    Spin Wheel (Coming Soon)
+                  </button>
+                )}
               </div>
             </div>
 

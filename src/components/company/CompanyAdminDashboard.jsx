@@ -31,6 +31,12 @@ import {
   getCompanyAdminAccessState,
   getCompanyAdminById,
 } from "../../services/companyAdminCloud";
+import {
+  deleteSpinWheel,
+  saveSpinWheel,
+  setSpinWheelLiveStatus,
+  subscribeSpinWheels,
+} from "../../services/spinWheelService";
 
 const normalizeDifficultyOption = (value) => {
   const raw = Number(value);
@@ -42,11 +48,18 @@ const normalizeDifficultyOption = (value) => {
 
 const buildEmptyDraft = () => ({
   title: "",
-  puzzleImage: "",
-  difficulty: "16",
+  puzzleImage: "", // Only for puzzles
+  difficulty: "16", // Only for puzzles
   timerMinutes: "3",
   maxAttempts: "3",
   campaignKey: generateCampaignKey(),
+});
+
+const buildEmptyWheelDraft = () => ({
+  title: "",
+  timerMinutes: "1",
+  maxAttempts: "1",
+  wheelKey: generateCampaignKey(),
 });
 
 const toDraft = (campaign) =>
@@ -60,6 +73,16 @@ const toDraft = (campaign) =>
         campaignKey: campaign.campaignKey || generateCampaignKey(),
       }
     : buildEmptyDraft();
+
+const toWheelDraft = (wheel) =>
+  wheel
+    ? {
+        title: wheel.title || "",
+        timerMinutes: String(Math.max(1, Math.round((wheel.timerSeconds || 60) / 60))),
+        maxAttempts: String(wheel.maxAttempts || 1),
+        wheelKey: wheel.wheelKey || generateCampaignKey(),
+      }
+    : buildEmptyWheelDraft();
 
 const buildCountdown = (endsAt, now) => {
   const remaining = Math.max(0, Number(endsAt || 0) - Number(now || 0));
@@ -130,9 +153,13 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
+  const [spinWheels, setSpinWheels] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
   const [editingCampaignId, setEditingCampaignId] = useState("");
+  const [selectedSpinWheelId, setSelectedSpinWheelId] = useState("");
+  const [editingSpinWheelId, setEditingSpinWheelId] = useState("");
   const [draft, setDraft] = useState(() => buildEmptyDraft());
+  const [wheelDraft, setWheelDraft] = useState(() => buildEmptyWheelDraft());
   const [users, setUsers] = useState([]);
   const [attempts, setAttempts] = useState([]);
   const [companyAdmin, setCompanyAdmin] = useState(null);
@@ -163,11 +190,16 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     setLoading(true);
     setError("");
     setCampaigns([]);
+    setSpinWheels([]);
     setSelectedCampaignId("");
     setEditingCampaignId("");
+    setSelectedSpinWheelId("");
+    setEditingSpinWheelId("");
     setDraft(buildEmptyDraft());
+    setWheelDraft(buildEmptyWheelDraft());
 
     let unsubCampaigns = () => {};
+    let unsubWheels = () => {};
     let unsubUsers = () => {};
     let unsubAttempts = () => {};
     let isMounted = true;
@@ -190,12 +222,23 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     const adminRefresh = setInterval(syncAdmin, 60000);
 
     try {
-      unsubCampaigns = subscribeCampaigns(companyId, (rows) => {
-        setCampaigns(rows);
-        setLoading(false);
+      unsubCampaigns = subscribeCampaigns(companyId, (next) => {
+        if (isMounted) {
+          setCampaigns(next);
+          setLoading(false);
+        }
       });
-      unsubUsers = subscribeUsers(companyId, (rows) => setUsers(rows));
-      unsubAttempts = subscribeAttempts(companyId, (rows) => setAttempts(rows));
+      unsubWheels = subscribeSpinWheels(companyId, (next) => {
+        if (isMounted) {
+          setSpinWheels(next);
+        }
+      });
+      unsubUsers = subscribeUsers(companyId, (next) => {
+        if (isMounted) setUsers(next);
+      });
+      unsubAttempts = subscribeAttempts(companyId, (next) => {
+        if (isMounted) setAttempts(next);
+      });
     } catch (syncError) {
       setLoading(false);
       setError(syncError?.message || "Realtime sync failed.");
@@ -205,10 +248,31 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       isMounted = false;
       clearInterval(adminRefresh);
       unsubCampaigns();
+      unsubWheels();
       unsubUsers();
       unsubAttempts();
     };
   }, [companyId]);
+
+  useEffect(() => {
+    setSelectedSpinWheelId((currentId) => {
+      if (spinWheels.some((item) => item.wheelId === currentId)) {
+        return currentId;
+      }
+      return spinWheels[0]?.wheelId || "";
+    });
+  }, [spinWheels]);
+
+  useEffect(() => {
+    if (!editingSpinWheelId) return;
+    const editingWheel = spinWheels.find((item) => item.wheelId === editingSpinWheelId);
+    if (!editingWheel) {
+      setEditingSpinWheelId("");
+      setWheelDraft(buildEmptyWheelDraft());
+      return;
+    }
+    setWheelDraft(toWheelDraft(editingWheel));
+  }, [spinWheels, editingSpinWheelId]);
 
   useEffect(() => {
     setSelectedCampaignId((currentId) => {
@@ -302,6 +366,15 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     [campaigns, editingCampaignId]
   );
 
+  const selectedSpinWheel = useMemo(
+    () => spinWheels.find((item) => item.wheelId === selectedSpinWheelId) || null,
+    [spinWheels, selectedSpinWheelId]
+  );
+  const editingWheel = useMemo(
+    () => spinWheels.find((item) => item.wheelId === editingSpinWheelId) || null,
+    [spinWheels, editingSpinWheelId]
+  );
+
   const campaignLink = useMemo(() => {
     if (!companyId || !selectedCampaign || typeof window === "undefined") {
       return "";
@@ -323,8 +396,33 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     )}`;
   }, [campaignLink]);
 
+  const wheelLink = useMemo(() => {
+    if (!companyId || !selectedSpinWheel || typeof window === "undefined") {
+      return "";
+    }
+    const base =
+      `${window.location.host === "localhost" ? "http://localhost:5173" : window.location.origin}/play?companyId=${encodeURIComponent(companyId)}` +
+      `&campaignId=${encodeURIComponent(selectedSpinWheel.wheelId)}&type=wheel`;
+    return selectedSpinWheel.wheelKey
+      ? `${base}&campaign=${encodeURIComponent(selectedSpinWheel.wheelKey)}`
+      : base;
+  }, [companyId, selectedSpinWheel]);
+
+  const wheelQrImageSrc = useMemo(() => {
+    if (!wheelLink) return "";
+    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
+      wheelLink
+    )}`;
+  }, [wheelLink]);
+
   const handleDraftChange = (field, value) => {
     setDraft((prev) => ({ ...prev, [field]: value }));
+    setMessage("");
+    setError("");
+  };
+
+  const handleWheelDraftChange = (field, value) => {
+    setWheelDraft((prev) => ({ ...prev, [field]: value }));
     setMessage("");
     setError("");
   };
@@ -407,10 +505,89 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       setDraft(toDraft(saved));
       setMessage(isEditing ? "Campaign updated." : "Campaign saved.");
     } catch (saveError) {
-      setError(saveError?.message || "Failed to save campaign.");
+      setError(saveError?.message || "Failed to delete campaign.");
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSaveSpinWheel = async () => {
+    if (!companyId) {
+      setError("Missing company ID.");
+      return;
+    }
+    const isEditing = Boolean(editingSpinWheelId);
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      const payload = {
+        title: wheelDraft.title.trim() || (isEditing ? editingWheel?.title : `Wheel ${spinWheels.length + 1}`),
+        timerSeconds: Math.max(1, Number(wheelDraft.timerMinutes) || 1) * 60,
+        maxAttempts: Math.max(1, Number(wheelDraft.maxAttempts) || 1),
+        wheelKey: (wheelDraft.wheelKey || generateCampaignKey()).trim().toUpperCase(),
+        isActive: editingWheel?.isActive || false,
+      };
+      const saved = await saveSpinWheel(companyId, payload, editingSpinWheelId);
+      setSelectedSpinWheelId(saved.wheelId);
+      setEditingSpinWheelId(saved.wheelId);
+      setMessage(isEditing ? "Spin wheel updated." : "Spin wheel saved.");
+    } catch (err) {
+      setError(err?.message || "Failed to save spin wheel.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditSpinWheel = (wheel) => {
+    setSelectedSpinWheelId(wheel.wheelId);
+    setEditingSpinWheelId(wheel.wheelId);
+    setWheelDraft(toWheelDraft(wheel));
+    setMessage("");
+    setError("");
+  };
+
+  const handleDeleteSpinWheel = async (wheel) => {
+    if (!companyId || !wheel?.wheelId) return;
+    if (!window.confirm(`Delete ${wheel.title}?`)) return;
+    setSaving(true);
+    try {
+      await deleteSpinWheel(companyId, wheel.wheelId);
+      if (editingSpinWheelId === wheel.wheelId) {
+        setEditingSpinWheelId("");
+        setWheelDraft(buildEmptyWheelDraft());
+      }
+    } catch (err) {
+      setError(err?.message || "Delete failed.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleSpinWheel = async (wheel) => {
+    if (!companyId || !wheel?.wheelId) return;
+    setSaving(true);
+    try {
+      await setSpinWheelLiveStatus(companyId, wheel.wheelId, !wheel.isActive);
+    } catch (err) {
+      setError(err?.message || "Status update failed.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateNewWheel = () => {
+    setEditingSpinWheelId("");
+    setWheelDraft(buildEmptyWheelDraft());
+    setMessage("");
+    setError("");
+  };
+
+  const handleCopyWheelLink = () => {
+    if (!wheelLink) return;
+    navigator.clipboard.writeText(wheelLink);
+    setMessage("Link copied to clipboard!");
+    setTimeout(() => setMessage(""), 2000);
   };
 
   const handleEditCampaign = (nextCampaign) => {
@@ -1226,10 +1403,203 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
             )}
 
             {activeTab === "spin_wheel" && (
-              <div className="bg-white rounded-[40px] p-20 flex flex-col items-center justify-center text-center shadow-sm border border-gray-100 animate-in fade-in zoom-in-95 duration-500">
-                <div className="w-32 h-32 bg-gray-50 rounded-full flex items-center justify-center text-6xl mb-8">🎡</div>
-                <h2 className="text-3xl font-black text-gray-900 mb-4">Spin Wheel Management</h2>
-                <p className="text-gray-500 font-medium max-w-md">This feature is currently being configured for your account. Campaign controls will appear here soon.</p>
+              <div className="grid lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                      <div>
+                        <h3 className="text-2xl font-black text-gray-900">
+                          {editingSpinWheelId ? "Edit Spin Wheel" : "Create Spin Wheel"}
+                        </h3>
+                        <p className="text-gray-500 font-medium mt-1">
+                          Configure your spin-to-win campaign settings.
+                        </p>
+                      </div>
+                      <button
+                        onClick={handleCreateNewWheel}
+                        className="flex items-center gap-2 bg-gray-50 text-gray-700 px-5 py-3 rounded-2xl font-black hover:bg-gray-100 transition-colors shrink-0"
+                      >
+                        <PlusCircle size={20} />
+                        New Wheel
+                      </button>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-6 pb-2">
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-gray-500">
+                          Campaign Title
+                        </label>
+                        <input
+                          type="text"
+                          value={wheelDraft.title}
+                          onChange={(e) => handleWheelDraftChange("title", e.target.value)}
+                          placeholder="Example: Holiday Prize Spin"
+                          className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-gray-500">
+                          Timer (Minutes)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={wheelDraft.timerMinutes}
+                          onChange={(e) => handleWheelDraftChange("timerMinutes", e.target.value)}
+                          className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-gray-500">
+                          Max Attempts
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={wheelDraft.maxAttempts}
+                          onChange={(e) => handleWheelDraftChange("maxAttempts", e.target.value)}
+                          className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-xs font-black uppercase tracking-widest text-gray-500">
+                          Wheel Key
+                        </label>
+                        <input
+                          type="text"
+                          value={wheelDraft.wheelKey}
+                          onChange={(e) => handleWheelDraftChange("wheelKey", e.target.value.toUpperCase())}
+                          className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none font-mono"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2 pt-2">
+                        <button
+                          onClick={handleSaveSpinWheel}
+                          disabled={saving}
+                          className="bg-mint text-white px-8 py-4 rounded-2xl font-black hover:bg-mint/90 transition-colors disabled:opacity-60 shadow-lg shadow-mint/10"
+                        >
+                          {saving ? "Saving..." : editingSpinWheelId ? "Update Wheel" : "Save Wheel"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
+                    <h3 className="text-2xl font-black text-gray-900 mb-6">Saved Spin Wheels</h3>
+                    
+                    {spinWheels.length === 0 ? (
+                      <div className="rounded-3xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-gray-400 font-semibold">
+                        No spin wheels created yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {spinWheels.map((wheel) => (
+                          <div
+                            key={wheel.wheelId}
+                            className={`rounded-3xl border p-5 transition-colors ${
+                              selectedSpinWheelId === wheel.wheelId
+                                ? "border-mint bg-mint/5"
+                                : "border-gray-100 bg-gray-50/70"
+                            }`}
+                          >
+                            <div className="flex flex-col xl:flex-row items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3">
+                                  <h4 className="text-xl font-black text-gray-900">{wheel.title}</h4>
+                                  <span
+                                    className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                                      wheel.isActive ? "bg-mint/10 text-mint" : "bg-accent/10 text-accent"
+                                    }`}
+                                  >
+                                    {wheel.isActive ? "Live" : "Stopped"}
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-xs font-mono text-gray-500">ID: {wheel.wheelId}</p>
+                                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                  <SummaryCard label="Timer" value={`${Math.round(wheel.timerSeconds / 60)}m`} />
+                                  <SummaryCard label="Max Attempts" value={wheel.maxAttempts} />
+                                  <SummaryCard label="Key" value={wheel.wheelKey} />
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-2 xl:justify-end">
+                                <button
+                                  onClick={() => setSelectedSpinWheelId(wheel.wheelId)}
+                                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-2xl font-black hover:bg-gray-200"
+                                >
+                                  Preview
+                                </button>
+                                <button
+                                  onClick={() => handleEditSpinWheel(wheel)}
+                                  className="bg-sky-blue text-white px-4 py-2 rounded-2xl font-black hover:bg-sky-blue/90"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleToggleSpinWheel(wheel)}
+                                  disabled={saving}
+                                  className={`px-4 py-2 rounded-2xl font-black text-white ${
+                                    wheel.isActive ? "bg-accent hover:bg-accent/90" : "bg-mint hover:bg-mint/90"
+                                  }`}
+                                >
+                                  {wheel.isActive ? "Stop" : "Start"}
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSpinWheel(wheel)}
+                                  className="bg-white text-accent border border-red-200 px-4 py-2 rounded-2xl font-black hover:bg-red-50"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+                    <h3 className="text-xl font-black text-gray-900">Wheel QR Code</h3>
+                    <p className="text-gray-500 text-sm mt-2">
+                      {selectedSpinWheel
+                        ? `Selected: ${selectedSpinWheel.title}`
+                        : "Select a wheel to generate QR."}
+                    </p>
+
+                    <div className="mt-4 rounded-2xl bg-gray-50 border border-gray-100 p-4 flex justify-center">
+                      {wheelQrImageSrc ? (
+                        <img src={wheelQrImageSrc} alt="Wheel QR" className="w-52 h-52 rounded-xl" />
+                      ) : (
+                        <div className="h-52 w-52 flex items-center justify-center text-gray-400 font-semibold text-center">
+                          Save/Select a wheel to generate QR
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4 bg-gray-50 p-3 rounded-2xl border border-gray-100 overflow-hidden">
+                      <p className="text-xs font-bold uppercase text-gray-500 mb-2">QR Link</p>
+                      <p className="text-sm font-semibold text-gray-700 break-all font-mono">
+                        {wheelLink || "--"}
+                      </p>
+                    </div>
+
+                    <div className="mt-4">
+                      <button
+                        onClick={handleCopyWheelLink}
+                        disabled={!wheelLink}
+                        className="w-full inline-flex items-center justify-center gap-2 bg-gray-900 text-white py-4 rounded-2xl font-black hover:bg-gray-800 transition-colors disabled:opacity-60"
+                      >
+                        <Copy size={20} />
+                        Copy Link
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

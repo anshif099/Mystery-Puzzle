@@ -90,12 +90,14 @@ function App() {
     const companyId = route.params.get("companyId") || "";
     const campaignId = route.params.get("campaignId") || "";
     const campaignKey = route.params.get("campaign") || "";
+    const type = route.params.get("type") || "puzzle";
 
     return (
       <PlayPortal
         companyId={companyId}
         campaignId={campaignId}
         campaignKey={campaignKey}
+        type={type}
         session={session}
         onUserSession={(userSession) => {
           if (!userSession) {
