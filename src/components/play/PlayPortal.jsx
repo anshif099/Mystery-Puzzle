@@ -43,22 +43,11 @@ const isAdjacent = (first, second, gridSize) => {
   return Math.abs(firstRow - secondRow) + Math.abs(firstCol - secondCol) === 1;
 };
 
-const shuffleTiles = (solvedTiles) => {
-  if (!Array.isArray(solvedTiles) || solvedTiles.length < 2) {
-    return [...(solvedTiles || [])];
-  }
-
-  const next = [...solvedTiles];
-  for (let index = next.length - 1; index > 0; index -= 1) {
-    const randomIndex = Math.floor(Math.random() * (index + 1));
-    [next[index], next[randomIndex]] = [next[randomIndex], next[index]];
-  }
-
-  if (isSolvedArrangement(next, solvedTiles)) {
-    [next[0], next[1]] = [next[1], next[0]];
-  }
-
-  return next;
+const resolveGridSize = (difficultyValue) => {
+  const raw = Number(difficultyValue);
+  if (raw === 24 || raw === 25 || raw === 5) return 5;
+  if (raw === 35 || raw === 36 || raw === 6) return 6;
+  return 4;
 };
 
 const shuffleSlidingTiles = (solvedTiles, gridSize) => {
@@ -116,7 +105,6 @@ const PlayPortal = ({
     email: "",
   });
   const [tiles, setTiles] = useState([]);
-  const [selectedTileIndex, setSelectedTileIndex] = useState(null);
 
   useEffect(() => {
     if (!companyId) {
@@ -195,24 +183,9 @@ const PlayPortal = ({
   );
 
   const leaderboard = useMemo(() => buildLeaderboard(users, attempts), [users, attempts]);
-  const difficulty = useMemo(() => Number(campaign?.difficulty) || 15, [campaign?.difficulty]);
-  const isBlankSlidingMode = difficulty === 15;
-  const gridSize = useMemo(() => {
-    if (isBlankSlidingMode) {
-      return 4;
-    }
-    return Math.max(2, Math.round(Math.sqrt(difficulty)));
-  }, [difficulty, isBlankSlidingMode]);
-  const pieceCount = useMemo(
-    () => (isBlankSlidingMode ? gridSize * gridSize - 1 : gridSize * gridSize),
-    [gridSize, isBlankSlidingMode]
-  );
-  const solvedTiles = useMemo(() => {
-    if (isBlankSlidingMode) {
-      return [...buildSolvedTiles(pieceCount), BLANK_TILE];
-    }
-    return buildSolvedTiles(pieceCount);
-  }, [isBlankSlidingMode, pieceCount]);
+  const gridSize = useMemo(() => resolveGridSize(campaign?.difficulty), [campaign?.difficulty]);
+  const pieceCount = useMemo(() => gridSize * gridSize - 1, [gridSize]);
+  const solvedTiles = useMemo(() => [...buildSolvedTiles(pieceCount), BLANK_TILE], [pieceCount]);
 
   const canStart =
     Boolean(campaign?.isActive) &&
@@ -226,14 +199,11 @@ const PlayPortal = ({
       return;
     }
 
-    const nextTiles = isBlankSlidingMode
-      ? shuffleSlidingTiles(solvedTiles, gridSize)
-      : shuffleTiles(solvedTiles);
+    const nextTiles = shuffleSlidingTiles(solvedTiles, gridSize);
     setTiles(nextTiles);
-    setSelectedTileIndex(null);
     setStarted(false);
     setTimerLeft(Number(campaign?.timerSeconds) || 180);
-  }, [mode, campaign?.puzzleImage, campaign?.timerSeconds, solvedTiles, isBlankSlidingMode, gridSize]);
+  }, [mode, campaign?.puzzleImage, campaign?.timerSeconds, solvedTiles, gridSize]);
 
   const handleGoogleLogin = async () => {
     if (!companyId) {
@@ -311,11 +281,8 @@ const PlayPortal = ({
     }
     setMessage("");
     setError("");
-    const nextTiles = isBlankSlidingMode
-      ? shuffleSlidingTiles(solvedTiles, gridSize)
-      : shuffleTiles(solvedTiles);
+    const nextTiles = shuffleSlidingTiles(solvedTiles, gridSize);
     setTiles(nextTiles);
-    setSelectedTileIndex(null);
     setTimerLeft(Number(campaign.timerSeconds) || 180);
     setStarted(true);
   };
@@ -325,49 +292,16 @@ const PlayPortal = ({
       return;
     }
 
-    if (isBlankSlidingMode) {
-      setTiles((previousTiles) => {
-        const blankIndex = previousTiles.indexOf(BLANK_TILE);
-        if (blankIndex < 0 || !isAdjacent(tilePositionIndex, blankIndex, gridSize)) {
-          return previousTiles;
-        }
-
-        const nextTiles = [...previousTiles];
-        [nextTiles[blankIndex], nextTiles[tilePositionIndex]] = [
-          nextTiles[tilePositionIndex],
-          nextTiles[blankIndex],
-        ];
-
-        if (isSolvedArrangement(nextTiles, solvedTiles)) {
-          const completionTime = Math.max(
-            0,
-            Number(campaign?.timerSeconds || 180) - Number(timerLeft || 0)
-          );
-          setStarted(false);
-          setMessage("Puzzle solved. Saving result...");
-          setTimeout(() => submitAttempt("solved", completionTime), 0);
-        }
-
-        return nextTiles;
-      });
-      return;
-    }
-
-    if (selectedTileIndex === null) {
-      setSelectedTileIndex(tilePositionIndex);
-      return;
-    }
-
-    if (selectedTileIndex === tilePositionIndex) {
-      setSelectedTileIndex(null);
-      return;
-    }
-
     setTiles((previousTiles) => {
+      const blankIndex = previousTiles.indexOf(BLANK_TILE);
+      if (blankIndex < 0 || !isAdjacent(tilePositionIndex, blankIndex, gridSize)) {
+        return previousTiles;
+      }
+
       const nextTiles = [...previousTiles];
-      [nextTiles[selectedTileIndex], nextTiles[tilePositionIndex]] = [
+      [nextTiles[blankIndex], nextTiles[tilePositionIndex]] = [
         nextTiles[tilePositionIndex],
-        nextTiles[selectedTileIndex],
+        nextTiles[blankIndex],
       ];
 
       if (isSolvedArrangement(nextTiles, solvedTiles)) {
@@ -382,7 +316,6 @@ const PlayPortal = ({
 
       return nextTiles;
     });
-    setSelectedTileIndex(null);
   };
 
   const submitAttempt = async (status, forcedTime) => {
@@ -561,8 +494,7 @@ const PlayPortal = ({
               <h3 className="text-xl font-black text-gray-900">Campaign Details</h3>
               <div className="mt-5 space-y-3 text-gray-700 font-semibold">
                 <p>
-                  Difficulty: {campaign?.difficulty || 15} pieces
-                  {Number(campaign?.difficulty) === 15 ? " (1 blank)" : ""}
+                  Difficulty: {pieceCount} pieces (1 blank)
                 </p>
                 <p>Timer: {formatDuration(campaign?.timerSeconds || 180)}</p>
                 <p>Max Attempts: {campaign?.maxAttempts || 3}</p>
@@ -640,11 +572,7 @@ const PlayPortal = ({
                           type="button"
                           onClick={() => handleTileTap(tilePositionIndex)}
                           className={`aspect-square rounded-lg border transition-all ${
-                            isBlank
-                              ? "bg-white border-gray-200"
-                              : selectedTileIndex === tilePositionIndex
-                              ? "border-mint ring-2 ring-mint/50 scale-[0.98]"
-                              : "border-white/70"
+                            isBlank ? "bg-white border-gray-200" : "border-white/70"
                           }`}
                           style={{
                             backgroundImage: isBlank ? "none" : `url(${campaign.puzzleImage})`,
@@ -661,13 +589,10 @@ const PlayPortal = ({
                     })}
                   </div>
                   <p className="mt-3 text-sm font-semibold text-gray-500">
-                    Puzzle Difficulty: {campaign?.difficulty || 15} pieces
-                    {isBlankSlidingMode ? " (1 blank move mode)" : ""}
+                    Puzzle Difficulty: {pieceCount} pieces (1 blank move mode)
                   </p>
                   <p className="mt-1 text-xs font-semibold text-gray-400">
-                    {isBlankSlidingMode
-                      ? "Tap a tile next to blank area to move it."
-                      : "Tap two pieces to swap their positions."}
+                    Tap a tile next to blank area to move it.
                   </p>
                 </div>
               ) : (
@@ -691,11 +616,8 @@ const PlayPortal = ({
                     if (!started || attemptSaving) {
                       return;
                     }
-                    const nextTiles = isBlankSlidingMode
-                      ? shuffleSlidingTiles(solvedTiles, gridSize)
-                      : shuffleTiles(solvedTiles);
+                    const nextTiles = shuffleSlidingTiles(solvedTiles, gridSize);
                     setTiles(nextTiles);
-                    setSelectedTileIndex(null);
                     setTimerLeft(Number(campaign?.timerSeconds || 180));
                   }}
                   disabled={!canStart || attemptSaving}

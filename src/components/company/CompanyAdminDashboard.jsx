@@ -12,9 +12,17 @@ import {
   subscribeUsers,
 } from "../../services/challengeService";
 
+const normalizeDifficultyOption = (value) => {
+  const raw = Number(value);
+  if (raw === 15 || raw === 16) return 15;
+  if (raw === 24 || raw === 25) return 24;
+  if (raw === 35 || raw === 36) return 35;
+  return 15;
+};
+
 const toDraft = (campaign) => ({
   puzzleImage: campaign?.puzzleImage || "",
-  difficulty: String(campaign?.difficulty || 15),
+  difficulty: String(normalizeDifficultyOption(campaign?.difficulty)),
   timerMinutes: String(Math.max(1, Math.round((campaign?.timerSeconds || 180) / 60))),
   maxAttempts: String(campaign?.maxAttempts || 3),
   campaignKey: campaign?.campaignKey || generateCampaignKey(),
@@ -122,7 +130,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     try {
       const payload = {
         puzzleImage: draft.puzzleImage || "",
-        difficulty: Number(draft.difficulty) || 15,
+        difficulty: normalizeDifficultyOption(draft.difficulty),
         timerSeconds: (Number(draft.timerMinutes) || 3) * 60,
         maxAttempts: Number(draft.maxAttempts) || 3,
         campaignKey: draft.campaignKey || generateCampaignKey(),
@@ -266,9 +274,8 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                     className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
                   >
                     <option value="15">15 Pieces (1 Blank)</option>
-                    <option value="16">16 Pieces</option>
-                    <option value="25">25 Pieces</option>
-                    <option value="36">36 Pieces</option>
+                    <option value="24">24 Pieces (1 Blank)</option>
+                    <option value="35">35 Pieces (1 Blank)</option>
                   </select>
                 </div>
 
