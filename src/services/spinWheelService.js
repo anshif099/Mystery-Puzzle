@@ -1,5 +1,6 @@
 import { get, push, ref, remove, set, update, onValue } from "firebase/database";
 import { firebaseConfigured, realtimeDb } from "./firebaseClient";
+import { getCompanyAdminById } from "./companyAdminCloud";
 
 const SPIN_WHEEL_PATH = "spin_wheels";
 const REQUEST_TIMEOUT_MS = 15000;
