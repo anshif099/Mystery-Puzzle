@@ -19,6 +19,7 @@ const initialForm = {
   campaigns: "0",
   subscriptionEndDate: "",
   status: "Active",
+  features: ["Puzzle"],
 };
 
 const CompanyManagement = () => {
@@ -64,6 +65,7 @@ const CompanyManagement = () => {
       campaigns: String(company.campaigns ?? 0),
       subscriptionEndDate: company.subscriptionEndDate || "",
       status: company.status || "Active",
+      features: Array.isArray(company.features) ? company.features : ["Puzzle"],
     });
     setFormError("");
     setShowModal(true);
@@ -159,6 +161,7 @@ const CompanyManagement = () => {
           campaigns: Number(formData.campaigns || 0),
           subscriptionEndDate: formData.subscriptionEndDate,
           status: formData.status,
+          features: formData.features,
           password:
             formData.password.trim() || existing?.password || "",
           createdAt: existing?.createdAt || Date.now(),
@@ -179,6 +182,7 @@ const CompanyManagement = () => {
           campaigns: Number(formData.campaigns || 0),
           subscriptionEndDate: formData.subscriptionEndDate,
           status: formData.status,
+          features: formData.features,
         });
         setCompanies((prev) => [created, ...prev]);
       }
@@ -301,6 +305,9 @@ const CompanyManagement = () => {
               <th className="px-8 py-6 text-sm font-black text-gray-600 uppercase tracking-widest">
                 Status
               </th>
+              <th className="px-8 py-6 text-sm font-black text-gray-600 uppercase tracking-widest">
+                Features
+              </th>
               <th className="px-8 py-6 text-sm font-black text-gray-600 uppercase tracking-widest text-right">
                 Actions
               </th>
@@ -309,7 +316,7 @@ const CompanyManagement = () => {
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <tr>
-                <td colSpan="8" className="px-8 py-10 text-center text-gray-500 font-semibold">
+                <td colSpan="9" className="px-8 py-10 text-center text-gray-500 font-semibold">
                   <span className="inline-flex items-center gap-2">
                     <Loader2 size={18} className="animate-spin" />
                     Loading company admins...
@@ -318,7 +325,7 @@ const CompanyManagement = () => {
               </tr>
             ) : companies.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-8 py-10 text-center text-gray-400 font-semibold">
+                <td colSpan="9" className="px-8 py-10 text-center text-gray-400 font-semibold">
                   No company admins found. Create one to get started.
                 </td>
               </tr>
@@ -354,6 +361,15 @@ const CompanyManagement = () => {
                     >
                       {accessState}
                     </span>
+                  </td>
+                  <td className="px-8 py-6">
+                    <div className="flex flex-wrap gap-1">
+                      {(company.features || ["Puzzle"]).map((f) => (
+                        <span key={f} className="bg-lavender-blue/10 text-lavender-blue px-2 py-0.5 rounded text-[10px] font-bold">
+                          {f}
+                        </span>
+                      ))}
+                    </div>
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex justify-end gap-2">
@@ -483,6 +499,32 @@ const CompanyManagement = () => {
                   <option value="Active">Active</option>
                   <option value="Disabled">Disabled</option>
                 </select>
+              </div>
+
+              <div className="md:col-span-2 space-y-3">
+                <label className="text-xs font-black uppercase text-gray-500 tracking-widest ml-1">
+                  Enabled Features
+                </label>
+                <div className="flex gap-6 p-4 bg-gray-50 rounded-2xl">
+                  {["Puzzle", "Spin Wheel"].map((feature) => (
+                    <label key={feature} className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={formData.features.includes(feature)}
+                        onChange={(e) => {
+                          const next = e.target.checked
+                            ? [...formData.features, feature]
+                            : formData.features.filter((f) => f !== feature);
+                          handleFieldChange("features", next);
+                        }}
+                        className="w-5 h-5 rounded border-gray-300 text-mint focus:ring-mint transition-all"
+                      />
+                      <span className="font-bold text-gray-700 group-hover:text-mint transition-colors">
+                        {feature}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {formError && (

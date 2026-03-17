@@ -12,6 +12,7 @@ import {
   PlusCircle,
   Trash2,
   UploadCloud,
+  RotateCcw,
 } from "lucide-react";
 import {
   buildOverviewMetrics,
@@ -140,6 +141,16 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [now, setNow] = useState(Date.now());
+
+  const features = useMemo(() => {
+    const list = Array.isArray(companyAdmin?.features) 
+      ? companyAdmin.features 
+      : Array.isArray(session?.features) 
+      ? session.features 
+      : ["Puzzle"];
+    return list.length > 0 ? list : ["Puzzle"];
+  }, [companyAdmin, session]);
+
   const logoutTriggeredRef = useRef(false);
 
   useEffect(() => {
@@ -485,6 +496,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
   const titleByTab = {
     dashboard: "Company Dashboard",
     campaigns: "Puzzle Management",
+    spin_wheel: "Spin Wheel Management",
     subscription: "Subscription Countdown",
   };
 
@@ -533,15 +545,28 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
               setIsSidebarOpen(false);
             }}
           />
-          <SidebarItem
-            icon={Flag}
-            label="Puzzle Management"
-            active={activeTab === "campaigns"}
-            onClick={() => {
-              setActiveTab("campaigns");
-              setIsSidebarOpen(false);
-            }}
-          />
+          {features.includes("Puzzle") && (
+            <SidebarItem
+              icon={Flag}
+              label="Puzzle Management"
+              active={activeTab === "campaigns"}
+              onClick={() => {
+                setActiveTab("campaigns");
+                setIsSidebarOpen(false);
+              }}
+            />
+          )}
+          {features.includes("Spin Wheel") && (
+            <SidebarItem
+              icon={RotateCcw}
+              label="Spin Wheel Management"
+              active={activeTab === "spin_wheel"}
+              onClick={() => {
+                setActiveTab("spin_wheel");
+                setIsSidebarOpen(false);
+              }}
+            />
+          )}
           <SidebarItem
             icon={Clock3}
             label="Subscription Countdown"
@@ -1198,6 +1223,14 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                   </div>
                 </div>
               </>
+            )}
+
+            {activeTab === "spin_wheel" && (
+              <div className="bg-white rounded-[40px] p-20 flex flex-col items-center justify-center text-center shadow-sm border border-gray-100 animate-in fade-in zoom-in-95 duration-500">
+                <div className="w-32 h-32 bg-gray-50 rounded-full flex items-center justify-center text-6xl mb-8">🎡</div>
+                <h2 className="text-3xl font-black text-gray-900 mb-4">Spin Wheel Management</h2>
+                <p className="text-gray-500 font-medium max-w-md">This feature is currently being configured for your account. Campaign controls will appear here soon.</p>
+              </div>
             )}
           </div>
         </main>

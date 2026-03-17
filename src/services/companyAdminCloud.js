@@ -88,6 +88,7 @@ const sanitizeCompany = (data, id) => ({
     : data?.subscriptionEndDate
     ? toEndOfDayTimestamp(data.subscriptionEndDate)
     : 0,
+  features: Array.isArray(data?.features) ? data.features : ["Puzzle"],
   createdAt: toTimestamp(data?.createdAt),
 });
 
