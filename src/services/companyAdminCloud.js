@@ -88,7 +88,12 @@ const sanitizeCompany = (data, id) => ({
     : data?.subscriptionEndDate
     ? toEndOfDayTimestamp(data.subscriptionEndDate)
     : 0,
-  features: Array.isArray(data?.features) ? data.features : ["Puzzle"],
+  featuresActive: data?.featuresActive || (data?.features !== undefined),
+  features: Array.isArray(data?.features) 
+    ? data.features 
+    : (data?.features && typeof data.features === 'object')
+    ? Object.entries(data.features).filter(([_, v]) => v === true).map(([k]) => k)
+    : (data?.featuresActive ? [] : ["Puzzle"]),
   createdAt: toTimestamp(data?.createdAt),
 });
 
@@ -209,6 +214,8 @@ export const createCompanyAdmin = async (payload) => {
     status: payload.status === "Disabled" ? "Disabled" : "Active",
     subscriptionEndDate: toDateInput(payload.subscriptionEndDate),
     subscriptionEndsAt: toEndOfDayTimestamp(payload.subscriptionEndDate),
+    featuresActive: true,
+    features: (payload.features || []).reduce((acc, f) => ({ ...acc, [f]: true }), {}),
     createdAt: Date.now(),
   };
 
@@ -235,6 +242,8 @@ export const updateCompanyAdmin = async (id, payload) => {
     subscriptionEndsAt: toEndOfDayTimestamp(
       payload.subscriptionEndDate || payload.subscriptionEndsAt
     ),
+    featuresActive: true,
+    features: (payload.features || []).reduce((acc, f) => ({ ...acc, [f]: true }), {}),
     createdAt: toTimestamp(payload.createdAt),
   };
 

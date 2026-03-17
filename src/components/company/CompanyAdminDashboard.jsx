@@ -148,7 +148,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       : Array.isArray(session?.features) 
       ? session.features 
       : ["Puzzle"];
-    return list.length > 0 ? list : ["Puzzle"];
+    return list;
   }, [companyAdmin, session]);
 
   const logoutTriggeredRef = useRef(false);
