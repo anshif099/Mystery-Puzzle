@@ -1,5 +1,5 @@
-const STATIC_CACHE = "mystery-puzzle-static-v1";
-const RUNTIME_CACHE = "mystery-puzzle-runtime-v1";
+const STATIC_CACHE = "mystery-puzzle-static-v2";
+const RUNTIME_CACHE = "mystery-puzzle-runtime-v2";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -39,17 +39,33 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (event.request.mode === "navigate") {
+  const isNavigationRequest = event.request.mode === "navigate";
+  const isAppCodeRequest =
+    event.request.destination === "script" ||
+    event.request.destination === "style" ||
+    requestUrl.pathname.startsWith("/assets/");
+
+  if (isNavigationRequest || isAppCodeRequest) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
+          if (!response || response.status !== 200 || response.type !== "basic") {
+            return response;
+          }
+
           const responseClone = response.clone();
           caches
             .open(RUNTIME_CACHE)
             .then((cache) => cache.put(event.request, responseClone));
           return response;
         })
-        .catch(() => caches.match("/index.html"))
+        .catch(async () => {
+          const cachedResponse = await caches.match(event.request);
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          return caches.match("/index.html");
+        })
     );
     return;
   }
