@@ -67,6 +67,8 @@ const AuthView = ({ onAuthSuccess }) => {
         companyName: companyAdmin.name,
         name: companyAdmin.admin,
         email: companyAdmin.email,
+        subscriptionEndDate: companyAdmin.subscriptionEndDate || "",
+        subscriptionEndsAt: Number(companyAdmin.subscriptionEndsAt || 0),
       });
     } catch (authError) {
       setErrors({

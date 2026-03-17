@@ -3,6 +3,8 @@ import { Plus, Edit2, Trash2, Eye, Loader2 } from "lucide-react";
 import {
   cloudCompanyAdminConfigured,
   createCompanyAdmin,
+  formatSubscriptionDate,
+  getCompanyAdminAccessState,
   deleteCompanyAdmin,
   getCompanyAdmins,
   getCompanyAdminsCached,
@@ -15,6 +17,7 @@ const initialForm = {
   email: "",
   password: "",
   campaigns: "0",
+  subscriptionEndDate: "",
   status: "Active",
 };
 
@@ -30,7 +33,7 @@ const CompanyManagement = () => {
   const [formData, setFormData] = useState(initialForm);
 
   const activeCompaniesCount = useMemo(
-    () => companies.filter((company) => company.status === "Active").length,
+    () => companies.filter((company) => getCompanyAdminAccessState(company) === "Active").length,
     [companies]
   );
 
@@ -59,6 +62,7 @@ const CompanyManagement = () => {
       email: company.email || "",
       password: "",
       campaigns: String(company.campaigns ?? 0),
+      subscriptionEndDate: company.subscriptionEndDate || "",
       status: company.status || "Active",
     });
     setFormError("");
@@ -121,6 +125,9 @@ const CompanyManagement = () => {
     if (formData.campaigns === "" || Number(formData.campaigns) < 0) {
       return "Campaign count must be 0 or more.";
     }
+    if (!formData.subscriptionEndDate) {
+      return "Subscription validity ending date is required.";
+    }
     return "";
   };
 
@@ -150,6 +157,7 @@ const CompanyManagement = () => {
           admin: formData.admin.trim(),
           email: formData.email.trim().toLowerCase(),
           campaigns: Number(formData.campaigns || 0),
+          subscriptionEndDate: formData.subscriptionEndDate,
           status: formData.status,
           password:
             formData.password.trim() || existing?.password || "",
@@ -169,6 +177,7 @@ const CompanyManagement = () => {
           email: formData.email.trim().toLowerCase(),
           password: formData.password.trim(),
           campaigns: Number(formData.campaigns || 0),
+          subscriptionEndDate: formData.subscriptionEndDate,
           status: formData.status,
         });
         setCompanies((prev) => [created, ...prev]);
@@ -287,6 +296,9 @@ const CompanyManagement = () => {
                 Campaigns
               </th>
               <th className="px-8 py-6 text-sm font-black text-gray-600 uppercase tracking-widest">
+                Valid Till
+              </th>
+              <th className="px-8 py-6 text-sm font-black text-gray-600 uppercase tracking-widest">
                 Status
               </th>
               <th className="px-8 py-6 text-sm font-black text-gray-600 uppercase tracking-widest text-right">
@@ -297,7 +309,7 @@ const CompanyManagement = () => {
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <tr>
-                <td colSpan="7" className="px-8 py-10 text-center text-gray-500 font-semibold">
+                <td colSpan="8" className="px-8 py-10 text-center text-gray-500 font-semibold">
                   <span className="inline-flex items-center gap-2">
                     <Loader2 size={18} className="animate-spin" />
                     Loading company admins...
@@ -306,12 +318,15 @@ const CompanyManagement = () => {
               </tr>
             ) : companies.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-8 py-10 text-center text-gray-400 font-semibold">
+                <td colSpan="8" className="px-8 py-10 text-center text-gray-400 font-semibold">
                   No company admins found. Create one to get started.
                 </td>
               </tr>
             ) : (
-              companies.map((company) => (
+              companies.map((company) => {
+                const accessState = getCompanyAdminAccessState(company);
+
+                return (
                 <tr key={company.id} className="hover:bg-gray-50/30 transition-colors">
                   <td className="px-8 py-6 font-bold text-gray-800">{company.name}</td>
                   <td className="px-8 py-6 font-medium text-gray-600">{company.admin}</td>
@@ -324,15 +339,20 @@ const CompanyManagement = () => {
                       {company.campaigns}
                     </span>
                   </td>
+                  <td className="px-8 py-6 font-semibold text-gray-600">
+                    {formatSubscriptionDate(company.subscriptionEndDate) || "--"}
+                  </td>
                   <td className="px-8 py-6">
                     <span
                       className={`px-3 py-1 rounded-full font-black text-[10px] uppercase tracking-wider ${
-                        company.status === "Active"
+                        accessState === "Active"
                           ? "bg-mint/10 text-mint"
+                          : accessState === "Expired"
+                          ? "bg-soft-yellow/20 text-yellow-700"
                           : "bg-accent/10 text-accent"
                       }`}
                     >
-                      {company.status}
+                      {accessState}
                     </span>
                   </td>
                   <td className="px-8 py-6">
@@ -361,7 +381,7 @@ const CompanyManagement = () => {
                     </div>
                   </td>
                 </tr>
-              ))
+              )})
             )}
           </tbody>
         </table>
@@ -433,6 +453,20 @@ const CompanyManagement = () => {
                   min="0"
                   value={formData.campaigns}
                   onChange={(event) => handleFieldChange("campaigns", event.target.value)}
+                  className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:ring-4 focus:ring-mint/10 focus:bg-white transition-all font-bold"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase text-gray-500 tracking-widest ml-1">
+                  Valid Till
+                </label>
+                <input
+                  type="date"
+                  value={formData.subscriptionEndDate}
+                  onChange={(event) =>
+                    handleFieldChange("subscriptionEndDate", event.target.value)
+                  }
                   className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:ring-4 focus:ring-mint/10 focus:bg-white transition-all font-bold"
                 />
               </div>
