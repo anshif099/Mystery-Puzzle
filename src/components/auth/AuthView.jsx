@@ -5,6 +5,15 @@ const AuthView = ({ setView }) => {
     email: '', password: ''
   });
   const [errors, setErrors] = useState({});
+  const validCredentials = {
+    email: 'mystery@gmail.com',
+    password: 'mystery@123'
+  };
+
+  const updateField = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: undefined, form: undefined }));
+  };
 
   const validate = () => {
     let newErrors = {};
@@ -14,25 +23,27 @@ const AuthView = ({ setView }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e, setView) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (validate()) {
-      // Super Admin Check
-      if (formData.email === 'mystery@gmail.com' && formData.password === 'mystery@123') {
-        alert('Logging in as Super Admin...');
-        setView('admin');
-        return;
-      }
 
-      // Role detection simulation
-      if (formData.email.startsWith('admin')) {
-        alert('Redirecting to Admin Dashboard...');
-      } else if (formData.email.startsWith('company')) {
-        alert('Redirecting to Company Dashboard...');
-      } else {
-        alert('Redirecting to Puzzle Game Dashboard...');
-      }
+    if (!validate()) {
+      return;
     }
+
+    const normalizedEmail = formData.email.trim().toLowerCase();
+    const isValidUser =
+      normalizedEmail === validCredentials.email && formData.password === validCredentials.password;
+
+    if (!isValidUser) {
+      setErrors((prev) => ({
+        ...prev,
+        form: 'Incorrect email or password.'
+      }));
+      return;
+    }
+
+    setErrors({});
+    setView('admin');
   };
 
   return (
@@ -63,14 +74,20 @@ const AuthView = ({ setView }) => {
             <p className="text-gray-500 font-medium">Login to your account to continue the challenge.</p>
           </div>
 
-          <form onSubmit={(e) => handleSubmit(e, setView)} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {errors.form && (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
+                {errors.form}
+              </div>
+            )}
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2 px-1">Email Address</label>
               <input 
                 type="email" 
                 placeholder="example@email.com"
+                value={formData.email}
                 className="w-full px-6 py-4 rounded-2xl bg-gray-50 border-transparent focus:bg-white focus:border-mint focus:ring-4 focus:ring-mint/10 transition-all outline-none font-medium"
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                onChange={(e) => updateField('email', e.target.value)}
               />
               {errors.email && <span className="text-accent text-xs font-bold px-1">{errors.email}</span>}
             </div>
@@ -84,7 +101,8 @@ const AuthView = ({ setView }) => {
                 type="password" 
                 placeholder="••••••••"
                 className="w-full px-6 py-4 rounded-2xl bg-gray-50 border-transparent focus:bg-white focus:border-mint focus:ring-4 focus:ring-mint/10 transition-all outline-none font-medium"
-                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                value={formData.password}
+                onChange={(e) => updateField('password', e.target.value)}
               />
               {errors.password && <span className="text-accent text-xs font-bold px-1">{errors.password}</span>}
             </div>
