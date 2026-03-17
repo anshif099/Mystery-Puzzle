@@ -1,5 +1,5 @@
 import { signInWithPopup, signOut } from "firebase/auth";
-import { get, onValue, push, ref, set, update } from "firebase/database";
+import { get, onValue, push, ref, remove, set, update } from "firebase/database";
 import { firebaseAuth, firebaseConfigured, googleProvider, realtimeDb } from "./firebaseClient";
 import { getCompanyAdminById } from "./companyAdminCloud";
 
@@ -7,6 +7,19 @@ const CAMPAIGN_PATH = "campaigns";
 const USERS_PATH = "users";
 const ATTEMPTS_PATH = "attempts";
 const REQUEST_TIMEOUT_MS = 15000;
+const CAMPAIGN_ITEMS_KEY = "items";
+const LEGACY_CAMPAIGN_ID = "legacy_main";
+const CAMPAIGN_FIELDS = [
+  "title",
+  "isActive",
+  "puzzleImage",
+  "difficulty",
+  "timerSeconds",
+  "maxAttempts",
+  "campaignKey",
+  "createdAt",
+  "updatedAt",
+];
 
 const ensureDb = () => {
   if (!firebaseConfigured || !realtimeDb) {
@@ -27,15 +40,23 @@ const withTimeout = async (promise, message) => {
   }
 };
 
-const normalizeCampaign = (data, companyId) => ({
+const normalizeCampaign = (data, companyId, campaignId = LEGACY_CAMPAIGN_ID) => ({
+  campaignId,
   companyId,
+  title:
+    data?.title ||
+    data?.name ||
+    (campaignId === LEGACY_CAMPAIGN_ID
+      ? "Main Campaign"
+      : `Campaign ${String(campaignId).slice(-4).toUpperCase()}`),
   isActive: Boolean(data?.isActive),
   puzzleImage: data?.puzzleImage || "",
   difficulty: Number(data?.difficulty) || 16,
   timerSeconds: Number(data?.timerSeconds) || 180,
   maxAttempts: Number(data?.maxAttempts) || 3,
   campaignKey: data?.campaignKey || "",
-  updatedAt: Number(data?.updatedAt) || Date.now(),
+  createdAt: Number(data?.createdAt) || Number(data?.updatedAt) || Date.now(),
+  updatedAt: Number(data?.updatedAt) || Number(data?.createdAt) || Date.now(),
 });
 
 const normalizeUser = (data, userId) => ({
@@ -51,6 +72,7 @@ const normalizeAttempt = (data, attemptId) => ({
   attemptId,
   userId: data?.userId || "",
   companyId: data?.companyId || "",
+  campaignId: data?.campaignId || LEGACY_CAMPAIGN_ID,
   name: data?.name || "",
   email: data?.email || "",
   phone: data?.phone || "",
@@ -70,43 +92,177 @@ export const formatDuration = (seconds) => {
 export const generateCampaignKey = () =>
   Math.random().toString(36).slice(2, 10).toUpperCase();
 
-export const getCampaign = async (companyId) => {
-  ensureDb();
-  const snapshot = await withTimeout(
-    get(ref(realtimeDb, `${CAMPAIGN_PATH}/${companyId}`)),
-    "Request timed out while loading campaign."
+const isLegacyCampaignConfig = (data) =>
+  Boolean(
+    data &&
+      typeof data === "object" &&
+      CAMPAIGN_FIELDS.some((field) => data[field] !== undefined)
   );
-  if (!snapshot.exists()) {
-    return normalizeCampaign(null, companyId);
+
+const extractCampaigns = (raw, companyId) => {
+  const campaigns = [];
+
+  if (isLegacyCampaignConfig(raw)) {
+    campaigns.push(normalizeCampaign(raw, companyId, LEGACY_CAMPAIGN_ID));
   }
-  return normalizeCampaign(snapshot.val(), companyId);
+
+  const items = raw?.[CAMPAIGN_ITEMS_KEY];
+  if (items && typeof items === "object") {
+    campaigns.push(
+      ...Object.entries(items).map(([campaignId, data]) =>
+        normalizeCampaign(data, companyId, campaignId)
+      )
+    );
+  }
+
+  return campaigns.sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
 };
 
-export const saveCampaign = async (companyId, payload) => {
-  ensureDb();
+const campaignCollectionRef = (companyId) => ref(realtimeDb, `${CAMPAIGN_PATH}/${companyId}`);
+const campaignItemsRef = (companyId) =>
+  ref(realtimeDb, `${CAMPAIGN_PATH}/${companyId}/${CAMPAIGN_ITEMS_KEY}`);
+const campaignItemRef = (companyId, campaignId) =>
+  ref(realtimeDb, `${CAMPAIGN_PATH}/${companyId}/${CAMPAIGN_ITEMS_KEY}/${campaignId}`);
 
-  const existing = await getCampaign(companyId);
+export const getCampaigns = async (companyId) => {
+  ensureDb();
+  const snapshot = await withTimeout(
+    get(campaignCollectionRef(companyId)),
+    "Request timed out while loading campaigns."
+  );
+  return extractCampaigns(snapshot.val(), companyId);
+};
+
+export const getCampaign = async (companyId, campaignId = "", campaignKey = "") => {
+  const campaigns = await getCampaigns(companyId);
+
+  if (!campaigns.length) {
+    return null;
+  }
+
+  if (campaignId) {
+    return campaigns.find((campaign) => campaign.campaignId === campaignId) || null;
+  }
+
+  if (campaignKey) {
+    return campaigns.find((campaign) => campaign.campaignKey === campaignKey) || null;
+  }
+
+  return campaigns[0];
+};
+
+export const saveCampaign = async (companyId, payload, campaignId = "") => {
+  ensureDb();
+  const isLegacyCampaign = campaignId === LEGACY_CAMPAIGN_ID;
+  const existing = campaignId ? await getCampaign(companyId, campaignId) : null;
+
+  if (isLegacyCampaign) {
+    const next = normalizeCampaign(
+      {
+        ...existing,
+        ...payload,
+        updatedAt: Date.now(),
+        createdAt: existing?.createdAt || Date.now(),
+        campaignKey: payload?.campaignKey || existing?.campaignKey || generateCampaignKey(),
+      },
+      companyId,
+      LEGACY_CAMPAIGN_ID
+    );
+
+    await withTimeout(
+      update(campaignCollectionRef(companyId), next),
+      "Request timed out while saving campaign."
+    );
+    return next;
+  }
+
+  if (campaignId) {
+    const next = normalizeCampaign(
+      {
+        ...existing,
+        ...payload,
+        updatedAt: Date.now(),
+        createdAt: existing?.createdAt || Date.now(),
+        campaignKey: payload?.campaignKey || existing?.campaignKey || generateCampaignKey(),
+      },
+      companyId,
+      campaignId
+    );
+
+    await withTimeout(
+      set(campaignItemRef(companyId, campaignId), next),
+      "Request timed out while saving campaign."
+    );
+    return next;
+  }
+
+  const createdRef = push(campaignItemsRef(companyId));
   const next = normalizeCampaign(
     {
-      ...existing,
       ...payload,
+      createdAt: Date.now(),
       updatedAt: Date.now(),
-      campaignKey: payload?.campaignKey || existing.campaignKey || generateCampaignKey(),
+      campaignKey: payload?.campaignKey || generateCampaignKey(),
     },
-    companyId
+    companyId,
+    createdRef.key
   );
 
   await withTimeout(
-    set(ref(realtimeDb, `${CAMPAIGN_PATH}/${companyId}`), next),
+    set(createdRef, next),
     "Request timed out while saving campaign."
   );
   return next;
 };
 
-export const setCampaignLiveStatus = async (companyId, isActive) => {
+export const deleteCampaign = async (companyId, campaignId) => {
   ensureDb();
+
+  if (campaignId === LEGACY_CAMPAIGN_ID) {
+    const snapshot = await withTimeout(
+      get(campaignCollectionRef(companyId)),
+      "Request timed out while loading campaign."
+    );
+    const raw = snapshot.val();
+    const hasItems =
+      raw?.[CAMPAIGN_ITEMS_KEY] && Object.keys(raw[CAMPAIGN_ITEMS_KEY]).length > 0;
+
+    if (hasItems) {
+      const legacyReset = CAMPAIGN_FIELDS.reduce((acc, field) => {
+        acc[field] = null;
+        return acc;
+      }, {});
+
+      await withTimeout(
+        update(campaignCollectionRef(companyId), legacyReset),
+        "Request timed out while deleting campaign."
+      );
+      return;
+    }
+
+    await withTimeout(
+      remove(campaignCollectionRef(companyId)),
+      "Request timed out while deleting campaign."
+    );
+    return;
+  }
+
   await withTimeout(
-    update(ref(realtimeDb, `${CAMPAIGN_PATH}/${companyId}`), {
+    remove(campaignItemRef(companyId, campaignId)),
+    "Request timed out while deleting campaign."
+  );
+};
+
+export const setCampaignLiveStatus = async (companyId, campaignId, isActive) => {
+  ensureDb();
+
+  const targetRef =
+    campaignId === LEGACY_CAMPAIGN_ID
+      ? campaignCollectionRef(companyId)
+      : campaignItemRef(companyId, campaignId);
+
+  await withTimeout(
+    update(targetRef, {
       isActive: Boolean(isActive),
       updatedAt: Date.now(),
     }),
@@ -211,8 +367,12 @@ export const getAttemptsByCompany = async (companyId) => {
     .sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
 };
 
-export const getUserAttemptStats = (attempts, userId) => {
-  const userAttempts = attempts.filter((attempt) => attempt.userId === userId);
+export const getUserAttemptStats = (attempts, userId, campaignId = "") => {
+  const userAttempts = attempts.filter(
+    (attempt) =>
+      attempt.userId === userId &&
+      (!campaignId || String(attempt.campaignId || "") === String(campaignId))
+  );
   const solved = userAttempts.find((attempt) => attempt.status === "solved");
   return {
     count: userAttempts.length,
@@ -223,18 +383,25 @@ export const getUserAttemptStats = (attempts, userId) => {
 
 export const saveAttempt = async ({
   companyId,
+  campaignId,
   user,
   status,
   completionTimeSec,
 }) => {
   ensureDb();
   const attempts = await getAttemptsByCompany(companyId);
-  const currentCount = attempts.filter((item) => item.userId === user.userId).length;
+  const currentCount = attempts.filter(
+    (item) =>
+      item.userId === user.userId &&
+      String(item.campaignId || LEGACY_CAMPAIGN_ID) ===
+        String(campaignId || LEGACY_CAMPAIGN_ID)
+  ).length;
   const attemptNumber = currentCount + 1;
 
   const record = {
     userId: user.userId,
     companyId,
+    campaignId: campaignId || LEGACY_CAMPAIGN_ID,
     name: user.name || "",
     email: user.email || "",
     phone: user.phone || "",
@@ -252,11 +419,22 @@ export const saveAttempt = async ({
   return normalizeAttempt(record, attemptRef.key);
 };
 
-export const subscribeCampaign = (companyId, callback) => {
+export const subscribeCampaigns = (companyId, callback) => {
   ensureDb();
-  const campaignRef = ref(realtimeDb, `${CAMPAIGN_PATH}/${companyId}`);
-  return onValue(campaignRef, (snapshot) => {
-    callback(normalizeCampaign(snapshot.val(), companyId));
+  const campaignsRef = campaignCollectionRef(companyId);
+  return onValue(campaignsRef, (snapshot) => {
+    callback(extractCampaigns(snapshot.val(), companyId));
+  });
+};
+
+export const subscribeCampaign = (companyId, campaignId, callback) => {
+  ensureDb();
+  const campaignsRef = campaignCollectionRef(companyId);
+  return onValue(campaignsRef, (snapshot) => {
+    const campaigns = extractCampaigns(snapshot.val(), companyId);
+    callback(
+      campaigns.find((campaign) => campaign.campaignId === campaignId) || null
+    );
   });
 };
 
@@ -322,9 +500,12 @@ export const buildParticipantRows = (users, attempts) =>
     };
   });
 
-export const buildLeaderboard = (users, attempts) => {
+export const buildLeaderboard = (users, attempts, campaignId = "") => {
   const userById = Object.fromEntries(users.map((user) => [user.userId, user]));
-  const solvedAttempts = attempts.filter((item) => item.status === "solved");
+  const relevantAttempts = campaignId
+    ? attempts.filter((item) => String(item.campaignId || "") === String(campaignId))
+    : attempts;
+  const solvedAttempts = relevantAttempts.filter((item) => item.status === "solved");
   const bestMap = {};
 
   solvedAttempts.forEach((attempt) => {
@@ -337,7 +518,7 @@ export const buildLeaderboard = (users, attempts) => {
   return Object.values(bestMap)
     .map((attempt) => {
       const user = userById[attempt.userId] || {};
-      const attemptsUsed = attempts.filter((item) => item.userId === attempt.userId).length;
+      const attemptsUsed = relevantAttempts.filter((item) => item.userId === attempt.userId).length;
       return {
         userId: attempt.userId,
         name: user.name || attempt.name || "Player",
@@ -358,7 +539,7 @@ export const buildLeaderboard = (users, attempts) => {
     }));
 };
 
-export const validatePlayAccess = async ({ companyId, campaignKey }) => {
+export const validatePlayAccess = async ({ companyId, campaignId, campaignKey }) => {
   const company = await getCompanyAdminById(companyId);
   if (!company) {
     throw new Error("Invalid company link.");
@@ -367,7 +548,10 @@ export const validatePlayAccess = async ({ companyId, campaignKey }) => {
     throw new Error("This company campaign is disabled.");
   }
 
-  const campaign = await getCampaign(companyId);
+  const campaign = await getCampaign(companyId, campaignId, campaignKey);
+  if (!campaign) {
+    throw new Error("Invalid company campaign link.");
+  }
   if (!campaign.isActive) {
     throw new Error("Campaign is not active right now.");
   }

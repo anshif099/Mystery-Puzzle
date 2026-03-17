@@ -95,6 +95,7 @@ const normalizeAttempts = (raw) => {
 
     return Object.entries(companyAttempts).map(([, attempt]) => ({
       companyId,
+      campaignId: attempt?.campaignId || "legacy_main",
       userId: attempt?.userId || "",
       userKey: `${companyId}:${attempt?.userId || ""}`,
       completionTimeSec: Number(attempt?.completionTimeSec) || 0,
@@ -109,10 +110,44 @@ const normalizeCampaigns = (raw) => {
     return [];
   }
 
-  return Object.entries(raw).map(([companyId, campaign]) => ({
-    companyId,
-    isActive: Boolean(campaign?.isActive),
-  }));
+  return Object.entries(raw).flatMap(([companyId, campaignGroup]) => {
+    if (!campaignGroup || typeof campaignGroup !== "object") {
+      return [];
+    }
+
+    const rows = [];
+    const hasLegacyFields = [
+      "title",
+      "isActive",
+      "puzzleImage",
+      "difficulty",
+      "timerSeconds",
+      "maxAttempts",
+      "campaignKey",
+    ].some((field) => campaignGroup[field] !== undefined);
+
+    if (hasLegacyFields) {
+      rows.push({
+        companyId,
+        campaignId: "legacy_main",
+        title: campaignGroup?.title || "Main Campaign",
+        isActive: Boolean(campaignGroup?.isActive),
+      });
+    }
+
+    if (campaignGroup?.items && typeof campaignGroup.items === "object") {
+      rows.push(
+        ...Object.entries(campaignGroup.items).map(([campaignId, item]) => ({
+          companyId,
+          campaignId,
+          title: item?.title || "Campaign",
+          isActive: Boolean(item?.isActive),
+        }))
+      );
+    }
+
+    return rows;
+  });
 };
 
 const buildFallbackCompanyName = (companyId) => {
@@ -229,6 +264,10 @@ const Analytics = () => {
   const chartState = useMemo(() => {
     const days = DEFAULT_ANALYTICS_DAYS;
     const firstDayStart = days[0].start;
+    const campaignTitleMap = campaigns.reduce((acc, item) => {
+      acc[`${item.companyId}:${item.campaignId}`] = item.title || "Campaign";
+      return acc;
+    }, {});
 
     const usersBeforeWindow = users.filter((user) => user.createdAt < firstDayStart).length;
     const usersPerDay = days.map((day) =>
@@ -266,18 +305,28 @@ const Analytics = () => {
         if (!attempt.companyId) {
           return;
         }
-        const bucket = companyBuckets[attempt.companyId] || { sum: 0, count: 0 };
+        const bucketKey = `${attempt.companyId}:${attempt.campaignId || "legacy_main"}`;
+        const bucket = companyBuckets[bucketKey] || {
+          sum: 0,
+          count: 0,
+          companyId: attempt.companyId,
+          campaignId: attempt.campaignId || "legacy_main",
+        };
         bucket.sum += Number(attempt.completionTimeSec || 0);
         bucket.count += 1;
-        companyBuckets[attempt.companyId] = bucket;
+        companyBuckets[bucketKey] = bucket;
       });
 
     const campaignRows = Object.entries(companyBuckets)
-      .map(([companyId, item]) => ({
-        companyId,
+      .map(([bucketKey, item]) => ({
+        bucketKey,
+        companyId: item.companyId,
+        campaignId: item.campaignId,
         avgSec: item.count > 0 ? Math.round(item.sum / item.count) : 0,
         count: item.count,
-        label: companyMap[companyId] || buildFallbackCompanyName(companyId),
+        label: `${companyMap[item.companyId] || buildFallbackCompanyName(item.companyId)} - ${
+          campaignTitleMap[bucketKey] || "Campaign"
+        }`,
       }))
       .sort((a, b) => a.avgSec - b.avgSec)
       .slice(0, 10);

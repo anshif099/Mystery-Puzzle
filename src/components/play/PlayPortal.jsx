@@ -131,6 +131,7 @@ const shuffleSlidingTiles = (solvedTiles, rows, cols) => {
 
 const PlayPortal = ({
   companyId,
+  campaignId,
   campaignKey,
   session,
   onUserSession,
@@ -141,6 +142,7 @@ const PlayPortal = ({
   const [message, setMessage] = useState("");
   const [company, setCompany] = useState(null);
   const [campaign, setCampaign] = useState(null);
+  const [activeCampaignId, setActiveCampaignId] = useState("");
   const [users, setUsers] = useState([]);
   const [attempts, setAttempts] = useState([]);
   const [mode, setMode] = useState("login");
@@ -166,15 +168,18 @@ const PlayPortal = ({
 
     setLoading(true);
     setError("");
+    setActiveCampaignId("");
 
     let unsubCampaign = () => {};
     let unsubUsers = () => {};
     let unsubAttempts = () => {};
 
-    validatePlayAccess({ companyId, campaignKey })
+    validatePlayAccess({ companyId, campaignId, campaignKey })
       .then(({ company: companyProfile, campaign: campaignConfig }) => {
+        const resolvedCampaignId = campaignConfig?.campaignId || campaignId || "";
         setCompany(companyProfile);
         setCampaign(campaignConfig);
+        setActiveCampaignId(resolvedCampaignId);
         setTimerLeft(Number(campaignConfig?.timerSeconds) || 180);
 
         if (session?.role === "user" && session.companyId === companyId && session.userId) {
@@ -188,7 +193,7 @@ const PlayPortal = ({
           setMode("game");
         }
 
-        unsubCampaign = subscribeCampaign(companyId, (nextCampaign) => {
+        unsubCampaign = subscribeCampaign(companyId, resolvedCampaignId, (nextCampaign) => {
           setCampaign(nextCampaign);
         });
         unsubUsers = subscribeUsers(companyId, (rows) => setUsers(rows));
@@ -206,7 +211,7 @@ const PlayPortal = ({
       unsubUsers();
       unsubAttempts();
     };
-  }, [campaignKey, companyId, session?.companyId, session?.role, session?.userEmail, session?.userId, session?.userName, session?.userPhone, session?.provider]);
+  }, [campaignId, campaignKey, companyId, session?.companyId, session?.role, session?.userEmail, session?.userId, session?.userName, session?.userPhone, session?.provider]);
 
   useEffect(() => {
     if (!started || timerLeft <= 0) {
@@ -229,11 +234,17 @@ const PlayPortal = ({
   }, [timerLeft, started, user, attemptSaving]);
 
   const userStats = useMemo(
-    () => (user ? getUserAttemptStats(attempts, user.userId) : { count: 0, solved: false }),
-    [attempts, user]
+    () =>
+      user
+        ? getUserAttemptStats(attempts, user.userId, activeCampaignId)
+        : { count: 0, solved: false },
+    [activeCampaignId, attempts, user]
   );
 
-  const leaderboard = useMemo(() => buildLeaderboard(users, attempts), [users, attempts]);
+  const leaderboard = useMemo(
+    () => buildLeaderboard(users, attempts, activeCampaignId),
+    [activeCampaignId, attempts, users]
+  );
   const difficultyValue = useMemo(
     () => resolveDifficultyValue(campaign?.difficulty),
     [campaign?.difficulty]
@@ -284,6 +295,7 @@ const PlayPortal = ({
         userPhone: profile.phone,
         provider: profile.provider,
         companyId,
+        campaignId: activeCampaignId || campaign?.campaignId || campaignId || "",
         companyName: company?.name || "",
       });
     } catch (loginError) {
@@ -326,6 +338,7 @@ const PlayPortal = ({
         userPhone: profile.phone,
         provider: profile.provider,
         companyId,
+        campaignId: activeCampaignId || campaign?.campaignId || campaignId || "",
         companyName: company?.name || "",
       });
     } catch (loginError) {
@@ -447,6 +460,7 @@ const PlayPortal = ({
 
       await saveAttempt({
         companyId,
+        campaignId: campaign?.campaignId || activeCampaignId || campaignId || "",
         user,
         status,
         completionTimeSec,

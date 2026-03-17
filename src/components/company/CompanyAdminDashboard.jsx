@@ -7,18 +7,22 @@ import {
   LogOut,
   Menu,
   PauseCircle,
+  Pencil,
   PlayCircle,
+  PlusCircle,
+  Trash2,
   UploadCloud,
 } from "lucide-react";
 import {
   buildOverviewMetrics,
   buildParticipantRows,
+  deleteCampaign,
   formatDuration,
   generateCampaignKey,
   saveCampaign,
   setCampaignLiveStatus,
   subscribeAttempts,
-  subscribeCampaign,
+  subscribeCampaigns,
   subscribeUsers,
 } from "../../services/challengeService";
 import {
@@ -35,13 +39,26 @@ const normalizeDifficultyOption = (value) => {
   return 16;
 };
 
-const toDraft = (campaign) => ({
-  puzzleImage: campaign?.puzzleImage || "",
-  difficulty: String(normalizeDifficultyOption(campaign?.difficulty)),
-  timerMinutes: String(Math.max(1, Math.round((campaign?.timerSeconds || 180) / 60))),
-  maxAttempts: String(campaign?.maxAttempts || 3),
-  campaignKey: campaign?.campaignKey || generateCampaignKey(),
+const buildEmptyDraft = () => ({
+  title: "",
+  puzzleImage: "",
+  difficulty: "16",
+  timerMinutes: "3",
+  maxAttempts: "3",
+  campaignKey: generateCampaignKey(),
 });
+
+const toDraft = (campaign) =>
+  campaign
+    ? {
+        title: campaign.title || "",
+        puzzleImage: campaign.puzzleImage || "",
+        difficulty: String(normalizeDifficultyOption(campaign.difficulty)),
+        timerMinutes: String(Math.max(1, Math.round((campaign.timerSeconds || 180) / 60))),
+        maxAttempts: String(campaign.maxAttempts || 3),
+        campaignKey: campaign.campaignKey || generateCampaignKey(),
+      }
+    : buildEmptyDraft();
 
 const buildCountdown = (endsAt, now) => {
   const remaining = Math.max(0, Number(endsAt || 0) - Number(now || 0));
@@ -88,12 +105,33 @@ const CountdownCard = ({ label, value }) => (
   </div>
 );
 
+const SummaryCard = ({ label, value, tone = "default" }) => (
+  <div className="rounded-2xl bg-gray-50 px-4 py-4">
+    <p className="text-[10px] uppercase tracking-widest font-black text-gray-500">{label}</p>
+    <p
+      className={`mt-2 text-2xl font-black ${
+        tone === "success"
+          ? "text-mint"
+          : tone === "warning"
+          ? "text-yellow-600"
+          : tone === "danger"
+          ? "text-accent"
+          : "text-gray-900"
+      }`}
+    >
+      {value}
+    </p>
+  </div>
+);
+
 const CompanyAdminDashboard = ({ session, onLogout }) => {
   const companyId = session?.companyId;
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [campaign, setCampaign] = useState(null);
-  const [draft, setDraft] = useState(() => toDraft(null));
+  const [campaigns, setCampaigns] = useState([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState("");
+  const [editingCampaignId, setEditingCampaignId] = useState("");
+  const [draft, setDraft] = useState(() => buildEmptyDraft());
   const [users, setUsers] = useState([]);
   const [attempts, setAttempts] = useState([]);
   const [companyAdmin, setCompanyAdmin] = useState(null);
@@ -113,8 +151,12 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
 
     setLoading(true);
     setError("");
+    setCampaigns([]);
+    setSelectedCampaignId("");
+    setEditingCampaignId("");
+    setDraft(buildEmptyDraft());
 
-    let unsubCampaign = () => {};
+    let unsubCampaigns = () => {};
     let unsubUsers = () => {};
     let unsubAttempts = () => {};
     let isMounted = true;
@@ -137,9 +179,8 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     const adminRefresh = setInterval(syncAdmin, 60000);
 
     try {
-      unsubCampaign = subscribeCampaign(companyId, (nextCampaign) => {
-        setCampaign(nextCampaign);
-        setDraft(toDraft(nextCampaign));
+      unsubCampaigns = subscribeCampaigns(companyId, (rows) => {
+        setCampaigns(rows);
         setLoading(false);
       });
       unsubUsers = subscribeUsers(companyId, (rows) => setUsers(rows));
@@ -152,11 +193,35 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     return () => {
       isMounted = false;
       clearInterval(adminRefresh);
-      unsubCampaign();
+      unsubCampaigns();
       unsubUsers();
       unsubAttempts();
     };
   }, [companyId]);
+
+  useEffect(() => {
+    setSelectedCampaignId((currentId) => {
+      if (campaigns.some((item) => item.campaignId === currentId)) {
+        return currentId;
+      }
+      return campaigns[0]?.campaignId || "";
+    });
+  }, [campaigns]);
+
+  useEffect(() => {
+    if (!editingCampaignId) {
+      return;
+    }
+
+    const editingCampaign = campaigns.find((item) => item.campaignId === editingCampaignId);
+    if (!editingCampaign) {
+      setEditingCampaignId("");
+      setDraft(buildEmptyDraft());
+      return;
+    }
+
+    setDraft(toDraft(editingCampaign));
+  }, [campaigns, editingCampaignId]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -211,15 +276,32 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
 
   const metrics = useMemo(() => buildOverviewMetrics(users, attempts), [users, attempts]);
   const participants = useMemo(() => buildParticipantRows(users, attempts), [users, attempts]);
+  const allowedCampaigns = Math.max(0, Number(companyAdmin?.campaigns ?? session?.campaigns ?? 0));
+  const activeCampaignCount = useMemo(
+    () => campaigns.filter((item) => item.isActive).length,
+    [campaigns]
+  );
+  const remainingCampaignSlots = Math.max(0, allowedCampaigns - campaigns.length);
+  const selectedCampaign = useMemo(
+    () => campaigns.find((item) => item.campaignId === selectedCampaignId) || null,
+    [campaigns, selectedCampaignId]
+  );
+  const editingCampaign = useMemo(
+    () => campaigns.find((item) => item.campaignId === editingCampaignId) || null,
+    [campaigns, editingCampaignId]
+  );
 
   const campaignLink = useMemo(() => {
-    if (!companyId || typeof window === "undefined") {
+    if (!companyId || !selectedCampaign || typeof window === "undefined") {
       return "";
     }
-    const key = draft.campaignKey || campaign?.campaignKey || "";
-    const base = `${window.location.origin}/play?companyId=${encodeURIComponent(companyId)}`;
-    return key ? `${base}&campaign=${encodeURIComponent(key)}` : base;
-  }, [companyId, campaign?.campaignKey, draft.campaignKey]);
+    const base =
+      `${window.location.origin}/play?companyId=${encodeURIComponent(companyId)}` +
+      `&campaignId=${encodeURIComponent(selectedCampaign.campaignId)}`;
+    return selectedCampaign.campaignKey
+      ? `${base}&campaign=${encodeURIComponent(selectedCampaign.campaignKey)}`
+      : base;
+  }, [companyId, selectedCampaign]);
 
   const qrImageSrc = useMemo(() => {
     if (!campaignLink) {
@@ -249,10 +331,44 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     reader.readAsDataURL(file);
   };
 
+  const handleCreateNewCampaign = () => {
+    setEditingCampaignId("");
+    setDraft(buildEmptyDraft());
+    setMessage("");
+
+    if (allowedCampaigns <= 0) {
+      setError("Campaign limit is 0. Contact super admin.");
+      return;
+    }
+
+    if (campaigns.length >= allowedCampaigns) {
+      setError("Reached maximum campaign limit.");
+      return;
+    }
+
+    setError("");
+  };
+
   const handleSaveCampaign = async () => {
     if (!companyId) {
       setError("Missing company ID.");
       return;
+    }
+
+    const isEditing = Boolean(editingCampaignId);
+    const currentEditingCampaign =
+      campaigns.find((item) => item.campaignId === editingCampaignId) || null;
+
+    if (!isEditing) {
+      if (allowedCampaigns <= 0) {
+        setError("Campaign limit is 0. Contact super admin.");
+        return;
+      }
+
+      if (campaigns.length >= allowedCampaigns) {
+        setError("Reached maximum campaign limit.");
+        return;
+      }
     }
 
     setSaving(true);
@@ -260,17 +376,25 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     setMessage("");
     try {
       const payload = {
-        puzzleImage: draft.puzzleImage || "",
+        title:
+          draft.title.trim() ||
+          currentEditingCampaign?.title ||
+          `Campaign ${campaigns.length + (isEditing ? 0 : 1)}`,
+        puzzleImage: draft.puzzleImage || currentEditingCampaign?.puzzleImage || "",
         difficulty: normalizeDifficultyOption(draft.difficulty),
-        timerSeconds: (Number(draft.timerMinutes) || 3) * 60,
-        maxAttempts: Number(draft.maxAttempts) || 3,
-        campaignKey: draft.campaignKey || generateCampaignKey(),
-        isActive: campaign?.isActive || false,
+        timerSeconds: Math.max(1, Number(draft.timerMinutes) || 3) * 60,
+        maxAttempts: Math.max(1, Number(draft.maxAttempts) || 3),
+        campaignKey:
+          (draft.campaignKey || currentEditingCampaign?.campaignKey || generateCampaignKey())
+            .trim()
+            .toUpperCase(),
+        isActive: currentEditingCampaign?.isActive || false,
       };
-      const saved = await saveCampaign(companyId, payload);
-      setCampaign(saved);
+      const saved = await saveCampaign(companyId, payload, editingCampaignId);
+      setSelectedCampaignId(saved.campaignId);
+      setEditingCampaignId(saved.campaignId);
       setDraft(toDraft(saved));
-      setMessage("Campaign settings saved.");
+      setMessage(isEditing ? "Campaign updated." : "Campaign saved.");
     } catch (saveError) {
       setError(saveError?.message || "Failed to save campaign.");
     } finally {
@@ -278,8 +402,55 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     }
   };
 
-  const handleToggleCampaign = async () => {
-    if (!campaign || !companyId) {
+  const handleEditCampaign = (nextCampaign) => {
+    setSelectedCampaignId(nextCampaign.campaignId);
+    setEditingCampaignId(nextCampaign.campaignId);
+    setDraft(toDraft(nextCampaign));
+    setMessage("");
+    setError("");
+  };
+
+  const handleDeleteSavedCampaign = async (nextCampaign) => {
+    if (!companyId || !nextCampaign?.campaignId) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${nextCampaign.title || "this campaign"}? This removes its saved settings.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setMessage("");
+
+    try {
+      await deleteCampaign(companyId, nextCampaign.campaignId);
+
+      if (editingCampaignId === nextCampaign.campaignId) {
+        setEditingCampaignId("");
+        setDraft(buildEmptyDraft());
+      }
+
+      if (selectedCampaignId === nextCampaign.campaignId) {
+        const remaining = campaigns.filter((item) => item.campaignId !== nextCampaign.campaignId);
+        setSelectedCampaignId(remaining[0]?.campaignId || "");
+      }
+
+      setMessage("Campaign deleted.");
+    } catch (deleteError) {
+      setError(deleteError?.message || "Failed to delete campaign.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleToggleCampaign = async (nextCampaign) => {
+    if (!nextCampaign || !companyId) {
+      setError("Save a campaign first.");
       return;
     }
 
@@ -287,8 +458,9 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     setError("");
     setMessage("");
     try {
-      await setCampaignLiveStatus(companyId, !campaign.isActive);
-      setMessage(campaign.isActive ? "Campaign stopped." : "Campaign started.");
+      await setCampaignLiveStatus(companyId, nextCampaign.campaignId, !nextCampaign.isActive);
+      setSelectedCampaignId(nextCampaign.campaignId);
+      setMessage(nextCampaign.isActive ? "Campaign stopped." : "Campaign started.");
     } catch (toggleError) {
       setError(toggleError?.message || "Failed to change campaign status.");
     } finally {
@@ -298,6 +470,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
 
   const handleCopyQrLink = async () => {
     if (!campaignLink) {
+      setError("Select a saved campaign first.");
       return;
     }
 
@@ -563,170 +736,392 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
 
             {activeTab === "campaigns" && (
               <div className="grid xl:grid-cols-3 gap-6">
-                <div className="xl:col-span-2 bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
-                  <h2 className="text-2xl font-black text-gray-900">Campaign Control</h2>
-                  <p className="text-gray-500 font-medium mt-2">
-                    Configure puzzle challenge and control campaign status.
-                  </p>
-
-                  {loading ? (
-                    <div className="mt-8 text-gray-500 font-semibold">Loading campaign...</div>
-                  ) : (
-                    <div className="mt-8 grid md:grid-cols-2 gap-5">
-                      <div className="space-y-2 md:col-span-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-gray-500">
-                          Puzzle Image
-                        </label>
-                        <label className="w-full border border-dashed border-gray-300 rounded-2xl p-4 flex items-center justify-center gap-3 cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
-                          <UploadCloud size={20} className="text-gray-600" />
-                          <span className="font-semibold text-gray-700">
-                            Upload Puzzle Logo/Image
-                          </span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            className="hidden"
-                          />
-                        </label>
-                        {draft.puzzleImage && (
-                          <img
-                            src={draft.puzzleImage}
-                            alt="Puzzle preview"
-                            className="w-full max-h-64 object-contain rounded-2xl border border-gray-100 bg-gray-50"
-                          />
-                        )}
+                <div className="xl:col-span-2 space-y-6">
+                  <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <h2 className="text-2xl font-black text-gray-900">Campaign Control</h2>
+                        <p className="text-gray-500 font-medium mt-2">
+                          Save campaigns, edit them anytime, and stay inside the limit given by the
+                          super admin.
+                        </p>
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-gray-500">
-                          Difficulty
-                        </label>
-                        <select
-                          value={draft.difficulty}
-                          onChange={(event) =>
-                            handleDraftChange("difficulty", event.target.value)
-                          }
-                          className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
-                        >
-                          <option value="8">8 Blocks</option>
-                          <option value="12">12 Blocks</option>
-                          <option value="16">16 Blocks</option>
-                          <option value="24">24 Blocks</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-gray-500">
-                          Timer (Minutes)
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={draft.timerMinutes}
-                          onChange={(event) =>
-                            handleDraftChange("timerMinutes", event.target.value)
-                          }
-                          className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-gray-500">
-                          Max Attempts
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={draft.maxAttempts}
-                          onChange={(event) =>
-                            handleDraftChange("maxAttempts", event.target.value)
-                          }
-                          className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-xs font-black uppercase tracking-widest text-gray-500">
-                          Campaign Key
-                        </label>
-                        <input
-                          type="text"
-                          value={draft.campaignKey}
-                          onChange={(event) =>
-                            handleDraftChange("campaignKey", event.target.value.toUpperCase())
-                          }
-                          className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none font-mono"
-                        />
-                      </div>
-
-                      <div className="md:col-span-2 flex flex-wrap gap-3 pt-2">
-                        <button
-                          type="button"
-                          onClick={handleSaveCampaign}
-                          disabled={saving}
-                          className="bg-mint text-white px-6 py-3 rounded-2xl font-black hover:bg-mint/90 transition-colors disabled:opacity-60"
-                        >
-                          {saving ? "Saving..." : "Save Campaign"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleToggleCampaign}
-                          disabled={saving}
-                          className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-black transition-colors disabled:opacity-60 ${
-                            campaign?.isActive
-                              ? "bg-accent text-white hover:bg-accent/90"
-                              : "bg-sky-blue text-white hover:bg-sky-blue/90"
-                          }`}
-                        >
-                          {campaign?.isActive ? (
-                            <PauseCircle size={18} />
-                          ) : (
-                            <PlayCircle size={18} />
-                          )}
-                          {campaign?.isActive ? "Stop Campaign" : "Start Campaign"}
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCreateNewCampaign}
+                        className="inline-flex items-center justify-center gap-2 bg-gray-900 text-white px-5 py-3 rounded-2xl font-black hover:bg-gray-800 transition-colors"
+                      >
+                        <PlusCircle size={18} />
+                        New Campaign
+                      </button>
                     </div>
-                  )}
-                </div>
 
-                <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
-                  <h3 className="text-xl font-black text-gray-900">Campaign QR Code</h3>
-                  <p className="text-gray-500 text-sm mt-2">
-                    Share this QR to allow users to login and play puzzle for your company
-                    campaign.
-                  </p>
-
-                  <div className="mt-4 rounded-2xl bg-gray-50 border border-gray-100 p-4 flex justify-center">
-                    {qrImageSrc ? (
-                      <img
-                        src={qrImageSrc}
-                        alt="Campaign QR Code"
-                        className="w-52 h-52 rounded-xl"
+                    <div className="mt-6 grid sm:grid-cols-3 gap-4">
+                      <SummaryCard label="Allowed Campaigns" value={allowedCampaigns} />
+                      <SummaryCard label="Saved Campaigns" value={campaigns.length} />
+                      <SummaryCard
+                        label="Remaining Slots"
+                        value={remainingCampaignSlots}
+                        tone={remainingCampaignSlots > 0 ? "success" : "warning"}
                       />
+                    </div>
+
+                    {loading ? (
+                      <div className="mt-8 text-gray-500 font-semibold">Loading campaigns...</div>
                     ) : (
-                      <div className="h-52 w-52 flex items-center justify-center text-gray-400 font-semibold">
-                        Save campaign to generate QR
+                      <div className="mt-8 grid md:grid-cols-2 gap-5">
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-xs font-black uppercase tracking-widest text-gray-500">
+                            Campaign Title
+                          </label>
+                          <input
+                            type="text"
+                            value={draft.title}
+                            onChange={(event) => handleDraftChange("title", event.target.value)}
+                            placeholder="Example: Summer Brand Reveal"
+                            className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-xs font-black uppercase tracking-widest text-gray-500">
+                            Puzzle Image
+                          </label>
+                          <label className="w-full border border-dashed border-gray-300 rounded-2xl p-4 flex items-center justify-center gap-3 cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+                            <UploadCloud size={20} className="text-gray-600" />
+                            <span className="font-semibold text-gray-700">
+                              Upload Puzzle Logo/Image
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageUpload}
+                              className="hidden"
+                            />
+                          </label>
+                          {draft.puzzleImage && (
+                            <img
+                              src={draft.puzzleImage}
+                              alt="Puzzle preview"
+                              className="w-full max-h-64 object-contain rounded-2xl border border-gray-100 bg-gray-50"
+                            />
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-black uppercase tracking-widest text-gray-500">
+                            Difficulty
+                          </label>
+                          <select
+                            value={draft.difficulty}
+                            onChange={(event) =>
+                              handleDraftChange("difficulty", event.target.value)
+                            }
+                            className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+                          >
+                            <option value="8">8 Blocks</option>
+                            <option value="12">12 Blocks</option>
+                            <option value="16">16 Blocks</option>
+                            <option value="24">24 Blocks</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-black uppercase tracking-widest text-gray-500">
+                            Timer (Minutes)
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={draft.timerMinutes}
+                            onChange={(event) =>
+                              handleDraftChange("timerMinutes", event.target.value)
+                            }
+                            className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-black uppercase tracking-widest text-gray-500">
+                            Max Attempts
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={draft.maxAttempts}
+                            onChange={(event) =>
+                              handleDraftChange("maxAttempts", event.target.value)
+                            }
+                            className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-xs font-black uppercase tracking-widest text-gray-500">
+                            Campaign Key
+                          </label>
+                          <input
+                            type="text"
+                            value={draft.campaignKey}
+                            onChange={(event) =>
+                              handleDraftChange("campaignKey", event.target.value.toUpperCase())
+                            }
+                            className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none font-mono"
+                          />
+                        </div>
+
+                        <div className="md:col-span-2 flex flex-wrap gap-3 pt-2">
+                          <button
+                            type="button"
+                            onClick={handleSaveCampaign}
+                            disabled={saving}
+                            className="bg-mint text-white px-6 py-3 rounded-2xl font-black hover:bg-mint/90 transition-colors disabled:opacity-60"
+                          >
+                            {saving
+                              ? "Saving..."
+                              : editingCampaign
+                              ? "Update Campaign"
+                              : "Save Campaign"}
+                          </button>
+
+                          {editingCampaign && (
+                            <button
+                              type="button"
+                              onClick={handleCreateNewCampaign}
+                              className="bg-gray-100 text-gray-700 px-6 py-3 rounded-2xl font-black hover:bg-gray-200 transition-colors"
+                            >
+                              Cancel Edit
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  <div className="mt-4 bg-gray-50 p-3 rounded-2xl border border-gray-100">
-                    <p className="text-xs font-bold uppercase text-gray-500 mb-2">QR Link</p>
-                    <p className="text-sm font-semibold text-gray-700 break-all">
-                      {campaignLink || "--"}
+                  <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <h3 className="text-2xl font-black text-gray-900">Saved Campaigns</h3>
+                        <p className="text-gray-500 font-medium mt-2">
+                          Every saved campaign appears here with edit, delete, preview, and
+                          start/stop controls.
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl bg-gray-50 px-4 py-3">
+                        <p className="text-[10px] uppercase tracking-widest font-black text-gray-500">
+                          Usage
+                        </p>
+                        <p className="mt-1 text-xl font-black text-gray-900">
+                          {campaigns.length}/{allowedCampaigns}
+                        </p>
+                      </div>
+                    </div>
+
+                    {loading ? (
+                      <div className="mt-8 text-gray-500 font-semibold">Loading campaigns...</div>
+                    ) : campaigns.length === 0 ? (
+                      <div className="mt-8 rounded-3xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-gray-400 font-semibold">
+                        No campaigns saved yet.
+                      </div>
+                    ) : (
+                      <div className="mt-6 space-y-4">
+                        {campaigns.map((item) => (
+                          <div
+                            key={item.campaignId}
+                            className={`rounded-3xl border p-5 transition-colors ${
+                              selectedCampaignId === item.campaignId
+                                ? "border-mint bg-mint/5"
+                                : "border-gray-100 bg-gray-50/70"
+                            }`}
+                          >
+                            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <h4 className="text-xl font-black text-gray-900 break-words">
+                                    {item.title}
+                                  </h4>
+                                  <span
+                                    className={`px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                                      item.isActive
+                                        ? "bg-mint/10 text-mint"
+                                        : "bg-accent/10 text-accent"
+                                    }`}
+                                  >
+                                    {item.isActive ? "Live" : "Stopped"}
+                                  </span>
+                                  {editingCampaignId === item.campaignId && (
+                                    <span className="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-sky-blue/10 text-sky-blue">
+                                      Editing
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className="mt-2 text-xs font-mono text-gray-500 break-all">
+                                  ID: {item.campaignId}
+                                </p>
+
+                                <div className="mt-4 grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                                  <SummaryCard
+                                    label="Difficulty"
+                                    value={`${normalizeDifficultyOption(item.difficulty)} blocks`}
+                                  />
+                                  <SummaryCard
+                                    label="Timer"
+                                    value={formatDuration(item.timerSeconds)}
+                                  />
+                                  <SummaryCard label="Max Attempts" value={item.maxAttempts} />
+                                  <SummaryCard
+                                    label="Updated"
+                                    value={new Date(item.updatedAt).toLocaleDateString()}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap gap-2 xl:justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedCampaignId(item.campaignId)}
+                                  className="bg-gray-100 text-gray-700 px-4 py-2 rounded-2xl font-black hover:bg-gray-200 transition-colors"
+                                >
+                                  Preview
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditCampaign(item)}
+                                  className="inline-flex items-center gap-2 bg-sky-blue text-white px-4 py-2 rounded-2xl font-black hover:bg-sky-blue/90 transition-colors"
+                                >
+                                  <Pencil size={16} />
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleCampaign(item)}
+                                  disabled={saving}
+                                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl font-black transition-colors disabled:opacity-60 ${
+                                    item.isActive
+                                      ? "bg-accent text-white hover:bg-accent/90"
+                                      : "bg-mint text-white hover:bg-mint/90"
+                                  }`}
+                                >
+                                  {item.isActive ? (
+                                    <PauseCircle size={16} />
+                                  ) : (
+                                    <PlayCircle size={16} />
+                                  )}
+                                  {item.isActive ? "Stop" : "Start"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSavedCampaign(item)}
+                                  disabled={saving}
+                                  className="inline-flex items-center gap-2 bg-white text-accent border border-red-200 px-4 py-2 rounded-2xl font-black hover:bg-red-50 transition-colors disabled:opacity-60"
+                                >
+                                  <Trash2 size={16} />
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+                    <h3 className="text-xl font-black text-gray-900">Campaign QR Code</h3>
+                    <p className="text-gray-500 text-sm mt-2">
+                      {selectedCampaign
+                        ? `Selected campaign: ${selectedCampaign.title}`
+                        : "Select a saved campaign to generate QR and share it."}
                     </p>
+
+                    <div className="mt-4 rounded-2xl bg-gray-50 border border-gray-100 p-4 flex justify-center">
+                      {qrImageSrc ? (
+                        <img
+                          src={qrImageSrc}
+                          alt="Campaign QR Code"
+                          className="w-52 h-52 rounded-xl"
+                        />
+                      ) : (
+                        <div className="h-52 w-52 flex items-center justify-center text-center text-gray-400 font-semibold">
+                          Save and select a campaign to generate QR
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-4 bg-gray-50 p-3 rounded-2xl border border-gray-100">
+                      <p className="text-xs font-bold uppercase text-gray-500 mb-2">QR Link</p>
+                      <p className="text-sm font-semibold text-gray-700 break-all">
+                        {campaignLink || "--"}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={handleCopyQrLink}
+                        disabled={!campaignLink}
+                        className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 bg-gray-900 text-white py-3 rounded-2xl font-bold hover:bg-gray-800 transition-colors disabled:opacity-60"
+                      >
+                        <Copy size={17} />
+                        Copy Link
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleCampaign(selectedCampaign)}
+                        disabled={!selectedCampaign || saving}
+                        className={`flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-colors disabled:opacity-60 ${
+                          selectedCampaign?.isActive
+                            ? "bg-accent text-white hover:bg-accent/90"
+                            : "bg-sky-blue text-white hover:bg-sky-blue/90"
+                        }`}
+                      >
+                        {selectedCampaign?.isActive ? (
+                          <PauseCircle size={17} />
+                        ) : (
+                          <PlayCircle size={17} />
+                        )}
+                        {selectedCampaign?.isActive ? "Stop" : "Start"}
+                      </button>
+                    </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleCopyQrLink}
-                    className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-gray-900 text-white py-3 rounded-2xl font-bold hover:bg-gray-800 transition-colors"
-                  >
-                    <Copy size={17} />
-                    Copy Link
-                  </button>
+                  <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm">
+                    <h3 className="text-xl font-black text-gray-900">Campaign Limits</h3>
+                    <p className="text-gray-500 text-sm mt-2">
+                      Company admins cannot create more campaigns than the super admin allowed.
+                    </p>
+
+                    <div className="mt-5 space-y-4">
+                      <div className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-4">
+                        <span className="font-semibold text-gray-500">Allowed</span>
+                        <span className="font-black text-gray-900">{allowedCampaigns}</span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-4">
+                        <span className="font-semibold text-gray-500">Saved</span>
+                        <span className="font-black text-gray-900">{campaigns.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-4">
+                        <span className="font-semibold text-gray-500">Remaining</span>
+                        <span
+                          className={`font-black ${
+                            remainingCampaignSlots > 0 ? "text-mint" : "text-yellow-600"
+                          }`}
+                        >
+                          {remainingCampaignSlots}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-4">
+                        <span className="font-semibold text-gray-500">Live Campaigns</span>
+                        <span className="font-black text-gray-900">{activeCampaignCount}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -774,14 +1169,12 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                     </p>
                     <div className="mt-6 space-y-4">
                       <div className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-4">
-                        <span className="font-semibold text-gray-500">Campaign Status</span>
-                        <span
-                          className={`font-black ${
-                            campaign?.isActive ? "text-mint" : "text-accent"
-                          }`}
-                        >
-                          {campaign?.isActive ? "Running" : "Stopped"}
-                        </span>
+                        <span className="font-semibold text-gray-500">Saved Campaigns</span>
+                        <span className="font-black text-gray-900">{campaigns.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-4">
+                        <span className="font-semibold text-gray-500">Live Campaigns</span>
+                        <span className="font-black text-gray-900">{activeCampaignCount}</span>
                       </div>
                       <div className="flex items-center justify-between rounded-2xl bg-gray-50 px-4 py-4">
                         <span className="font-semibold text-gray-500">Participants</span>

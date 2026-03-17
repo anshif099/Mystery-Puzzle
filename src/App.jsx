@@ -88,11 +88,13 @@ function App() {
 
   if (route.path === "/play") {
     const companyId = route.params.get("companyId") || "";
+    const campaignId = route.params.get("campaignId") || "";
     const campaignKey = route.params.get("campaign") || "";
 
     return (
       <PlayPortal
         companyId={companyId}
+        campaignId={campaignId}
         campaignKey={campaignKey}
         session={session}
         onUserSession={(userSession) => {
