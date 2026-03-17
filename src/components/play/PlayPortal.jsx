@@ -229,7 +229,7 @@ const PlayPortal = ({
   }, [campaignId, campaignKey, companyId, session?.companyId, session?.role, session?.userEmail, session?.userId, session?.userName, session?.userPhone, session?.provider]);
 
   useEffect(() => {
-    if (!started || timerLeft <= 0) {
+    if (!started || timerLeft <= 0 || type === "wheel") {
       return undefined;
     }
 
@@ -461,24 +461,22 @@ const PlayPortal = ({
     const segmentAngle = 360 / items.length;
     const randomIndex = Math.floor(Math.random() * items.length);
     
-    // Calculate rotation: Current + 5 full circles (1800deg) + offset to land on segment center
-    // We want the pointer (usually at top, 0deg) to land on randomIndex.
-    // Index 0 is at 0 degrees, Index 1 at segmentAngle, etc.
-    // To land Index on top, we need to rotate by (360 - index * segmentAngle)
-    const extraSpins = 5;
-    const targetRotation = rotation + (360 * extraSpins) + (360 - (randomIndex * segmentAngle)) - (rotation % 360);
+    // Calculate rotation with random offset within the segment
+    const extraSpins = 8 + Math.floor(Math.random() * 5);
+    const segmentOffset = (Math.random() * 0.6 + 0.2) * segmentAngle; // Land between 20% and 80% of segment
+    const targetRotation = rotation + (360 * extraSpins) + (360 - (randomIndex * segmentAngle) - segmentOffset) - (rotation % 360);
     
     setIsSpinning(true);
     setRotation(targetRotation);
     setWinner(null);
 
-    // Wait for animation (3 seconds)
+    // Wait for animation (4 seconds)
     setTimeout(() => {
       setIsSpinning(false);
       const wonItem = items[randomIndex];
       setWinner(wonItem);
-      submitAttempt("solved", 0, wonItem.name); // Using forcedTime 0 for wheel
-    }, 4000);
+      submitAttempt("solved", 0, wonItem.name);
+    }, 4100);
   };
 
   const submitAttempt = async (status, forcedTime, prizeName = "") => {
@@ -710,10 +708,12 @@ const PlayPortal = ({
               </div>
 
               <div className="mt-6 grid sm:grid-cols-3 gap-4">
-                <div className="bg-gray-50 rounded-2xl p-4">
-                  <p className="text-xs font-black uppercase text-gray-500">Timer Left</p>
-                  <p className="text-3xl font-black text-gray-900 mt-2">{formatDuration(timerLeft)}</p>
-                </div>
+                {type === "puzzle" && (
+                  <div className="bg-gray-50 rounded-2xl p-4">
+                    <p className="text-xs font-black uppercase text-gray-500">Timer Left</p>
+                    <p className="text-3xl font-black text-gray-900 mt-2">{formatDuration(timerLeft)}</p>
+                  </div>
+                )}
                 <div className="bg-gray-50 rounded-2xl p-4">
                   <p className="text-xs font-black uppercase text-gray-500">Attempts Used</p>
                   <p className="text-3xl font-black text-gray-900 mt-2">
