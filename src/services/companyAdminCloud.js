@@ -96,15 +96,19 @@ export const getCompanyAdmins = async () => {
 };
 
 export const getCompanyAdminById = async (companyId) => {
-  ensureRealtimeDb();
-  const snapshot = await withTimeout(
-    get(ref(realtimeDb, `${COMPANY_ADMIN_PATH}/${companyId}`)),
-    "Request timed out while loading company admin profile."
-  );
-  if (!snapshot.exists()) {
+  if (!companyId) {
     return null;
   }
-  return sanitizeCompany(snapshot.val(), companyId);
+
+  const admins = await getCompanyAdmins();
+  return (
+    admins.find(
+      (admin) =>
+        admin.id === companyId ||
+        String(admin.companyId || "").toLowerCase() ===
+          String(companyId).toLowerCase()
+    ) || null
+  );
 };
 
 export const findCompanyAdminByCredentials = async (email, password) => {

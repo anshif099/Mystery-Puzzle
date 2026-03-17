@@ -360,8 +360,11 @@ export const buildLeaderboard = (users, attempts) => {
 
 export const validatePlayAccess = async ({ companyId, campaignKey }) => {
   const company = await getCompanyAdminById(companyId);
-  if (!company || company.status === "Disabled") {
+  if (!company) {
     throw new Error("Invalid company link.");
+  }
+  if (company.status === "Disabled") {
+    throw new Error("This company campaign is disabled.");
   }
 
   const campaign = await getCampaign(companyId);
