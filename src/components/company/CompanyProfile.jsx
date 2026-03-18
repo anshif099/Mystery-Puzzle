@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
-import { UploadCloud, Loader2, UserCircle, Palette } from "lucide-react";
+import { Loader2, Palette, UploadCloud, UserCircle } from "lucide-react";
 import { updateCompanyAdmin } from "../../services/companyAdminCloud";
+import { readSession, writeSession } from "../../services/session";
 
 const extractProminentColor = (imgElement) => {
   const canvas = document.createElement("canvas");
@@ -95,6 +95,16 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
         logo,
         themeColor,
       });
+
+      const currentSession = readSession();
+      if (currentSession && currentSession.companyId === updated.companyId) {
+        writeSession({
+          ...currentSession,
+          themeColor: updated.themeColor,
+          logo: updated.logo
+        });
+      }
+
       setMessage("Profile updated successfully!");
       if (onUpdate) {
         onUpdate(updated);

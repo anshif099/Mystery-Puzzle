@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Clock3,
   Copy,
@@ -373,7 +373,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     return undefined;
   }, [accessState, onLogout]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const color = companyAdmin?.themeColor || session?.themeColor || "#63D3A4";
     const hex = color.replace("#", "");
     if (hex.length === 6) {
