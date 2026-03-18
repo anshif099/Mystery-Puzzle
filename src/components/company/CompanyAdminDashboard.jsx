@@ -147,12 +147,12 @@ const CountdownCard = ({ label, value }) => (
 );
 
 const SummaryCard = ({ label, value, tone = "default" }) => (
-  <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-xl border border-gray-100 whitespace-nowrap min-w-0">
-    <span className="text-[10px] uppercase tracking-wider font-black text-gray-400 shrink-0">
+  <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 rounded-lg border border-gray-100 whitespace-nowrap shrink-0">
+    <span className="text-[8px] uppercase tracking-wider font-black text-gray-400">
       {label}:
     </span>
     <span
-      className={`text-sm font-black truncate ${
+      className={`text-[11px] font-black ${
         tone === "success"
           ? "text-mint"
           : tone === "warning"
@@ -161,7 +161,6 @@ const SummaryCard = ({ label, value, tone = "default" }) => (
           ? "text-accent"
           : "text-gray-900"
       }`}
-      title={String(value)}
     >
       {value}
     </span>
@@ -1324,7 +1323,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                                   ID: {item.campaignId}
                                 </p>
 
-                                <div className="mt-4 flex flex-wrap gap-2 items-center">
+                                <div className="mt-4 flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                                   <SummaryCard
                                     label="Difficulty"
                                     value={`${normalizeDifficultyOption(item.difficulty)} blocks`}
