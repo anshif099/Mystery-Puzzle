@@ -17,6 +17,7 @@ import {
   validateWheelAccess,
 } from "../../services/spinWheelService";
 import { clearSession } from "../../services/session";
+import SpinWheel from "../common/SpinWheel";
 
 const BLANK_TILE = -1;
 const DIFFICULTY_LAYOUTS = {
@@ -830,71 +831,7 @@ const PlayPortal = ({
                       className="w-full h-full rounded-full overflow-hidden relative transition-transform duration-[4000ms] cubic-bezier-wheel"
                       style={{ transform: `rotate(${rotation}deg)` }}
                     >
-                      {campaign.items && campaign.items.length > 0 ? (
-                        (() => {
-                          const totalW = campaign.items.reduce((sum, i) => sum + (Number(i.chance) || 0), 0) || 100;
-                          let runningAngle = 0;
-                          const processedItems = campaign.items.map((item, idx) => {
-                            const angleSz = ((Number(item.chance) || 0) / totalW) * 360;
-                            const res = { ...item, startAngle: runningAngle, angleSize: angleSz };
-                            runningAngle += angleSz;
-                            return res;
-                          });
-
-                          return (
-                            <>
-                              {/* Background Segments */}
-                              {processedItems.map((item, index) => {
-                                const bgColors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEEAD", "#D4A5A5", "#9B59B6", "#34495E"];
-                                return (
-                                  <div
-                                    key={`bg-${index}`}
-                                    className="absolute top-0 right-0 w-1/2 h-1/2 origin-bottom-left"
-                                    style={{
-                                      transform: `rotate(${item.startAngle}deg) skewY(${(90 - item.angleSize)}deg)`,
-                                      backgroundColor: bgColors[index % bgColors.length],
-                                      border: '1px solid rgba(0,0,0,0.1)'
-                                    }}
-                                  />
-                                );
-                              })}
-
-                              {/* Item Content (Images) */}
-                              <div className="absolute inset-0 z-10">
-                                {processedItems.map((item, index) => {
-                                  const contentRotation = item.startAngle + item.angleSize / 2;
-                                  return (
-                                    <div 
-                                      key={`img-${index}`} 
-                                      className="absolute inset-0 origin-center"
-                                      style={{ transform: `rotate(${contentRotation}deg)` }}
-                                    >
-                                      <div 
-                                        className="absolute top-[22%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none"
-                                        style={{ transform: 'rotate(0deg)' }}
-                                      >
-                                        {item.image && (
-                                          <div className="w-20 h-20 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-white shrink-0">
-                                            <img 
-                                              src={item.image} 
-                                              alt="" 
-                                              className="w-full h-full object-cover" 
-                                            />
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </>
-                          );
-                        })()
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 font-bold">
-                           No Items Set
-                        </div>
-                      )}
+                      <SpinWheel items={campaign.items || []} rotation={rotation} />
                     </div>
 
                     {/* Central Spin Button */}
