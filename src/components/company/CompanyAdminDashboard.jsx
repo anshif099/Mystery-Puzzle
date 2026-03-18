@@ -1581,7 +1581,23 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                   </div>
 
                   <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm">
-                    <h3 className="text-2xl font-black text-gray-900 mb-6">Saved Spin Wheels</h3>
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
+                      <div>
+                        <h3 className="text-2xl font-black text-gray-900">Saved Spin Wheels</h3>
+                        <p className="text-gray-500 font-medium mt-1">
+                          Manage your active and inactive wheels.
+                        </p>
+                      </div>
+
+                      <div className="rounded-2xl bg-gray-50 px-4 py-3">
+                        <p className="text-[10px] uppercase tracking-widest font-black text-gray-500">
+                          Usage
+                        </p>
+                        <p className="mt-1 text-xl font-black text-gray-900">
+                          {spinWheels.length}/{allowedCampaigns}
+                        </p>
+                      </div>
+                    </div>
                     
                     {spinWheels.length === 0 ? (
                       <div className="rounded-3xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center text-gray-400 font-semibold">
