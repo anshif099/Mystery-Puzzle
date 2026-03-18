@@ -125,22 +125,6 @@ const SpinWheel = ({ items = [], rotation = 0 }) => {
             strokeWidth="2"
             opacity="0.95"
           />
-
-          {/* Optional: Segment label (company name or percentage) */}
-          {segment.angleSize > 20 && (
-            <text
-              x="200"
-              y="200"
-              textAnchor="middle"
-              transform={`rotate(${segment.midAngle} 200 200) translate(110 0)`}
-              fill="white"
-              fontSize="11"
-              fontWeight="bold"
-              pointerEvents="none"
-            >
-              {Math.round(segment.percentage)}%
-            </text>
-          )}
         </g>
       ))}
 
@@ -158,59 +142,42 @@ const SpinWheel = ({ items = [], rotation = 0 }) => {
         SPIN
       </text>
 
-      {/* Item images positioned at segment edges */}
+      {/* Item images positioned on segments */}
       {wheelData.segments.map((segment) => {
         if (!segment.image) return null;
 
-        const pos = calculateImagePosition(segment.midAngle, 240);
+        const pos = calculateImagePosition(segment.midAngle, 120);
 
         return (
           <g key={`img-${segment.index}`}>
-            {/* Image outer circle (white border) */}
-            <circle
-              cx={pos.x}
-              cy={pos.y}
-              r="32"
-              fill="white"
-              stroke="#FCD34D"
-              strokeWidth="3"
-              opacity="0.98"
-              filter="drop-shadow(0 4px 12px rgba(0,0,0,0.15))"
-            />
-
             {/* Image clip path for circular mask */}
             <defs>
               <clipPath id={`clip-${segment.index}`}>
-                <circle cx={pos.x} cy={pos.y} r="29" />
+                <circle cx={pos.x} cy={pos.y} r="20" />
               </clipPath>
             </defs>
+
+            {/* Item image circle background */}
+            <circle
+              cx={pos.x}
+              cy={pos.y}
+              r="20"
+              fill="white"
+              opacity="0.95"
+              filter="drop-shadow(0 2px 8px rgba(0,0,0,0.2))"
+            />
 
             {/* Item image */}
             <image
               href={segment.image}
-              x={pos.x - 29}
-              y={pos.y - 29}
-              width="58"
-              height="58"
+              x={pos.x - 20}
+              y={pos.y - 20}
+              width="40"
+              height="40"
               clipPath={`url(#clip-${segment.index})`}
               preserveAspectRatio="xMidYMid slice"
               opacity="1"
             />
-
-            {/* Company name label below image */}
-            {segment.angleSize > 15 && (
-              <text
-                x={pos.x}
-                y={pos.y + 52}
-                textAnchor="middle"
-                fill="#374151"
-                fontSize="10"
-                fontWeight="bold"
-                pointerEvents="none"
-              >
-                {segment.name ? segment.name.substring(0, 8) : ""}
-              </text>
-            )}
           </g>
         );
       })}
