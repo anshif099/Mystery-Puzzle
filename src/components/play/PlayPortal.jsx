@@ -491,11 +491,12 @@ const PlayPortal = ({
     const targetCenter = targetStartAngle + targetAngleSize / 2;
     
     // Rotation with random offset within the segment center area
-    // The arrow points at 0 degrees (top), so we need to rotate the wheel so the target segment center is at top
+    // The arrow points at the top (270° in standard coordinates)
+    // We need to rotate the wheel so the target segment's midpoint appears at 270°
     const extraSpins = 8 + Math.floor(Math.random() * 5);
     const segmentOffset = (Math.random() * 0.4 + 0.3) * targetAngleSize;
     const targetPointAngle = targetStartAngle + segmentOffset;
-    const angleToRotate = (360 - targetPointAngle) % 360; // How much to rotate so segment points to top (0°)
+    const angleToRotate = (270 - targetPointAngle + 360) % 360; // Rotate so segment reaches the top (270°)
     const targetRotation = rotation + (360 * extraSpins) + angleToRotate;
     
     setIsSpinning(true);
