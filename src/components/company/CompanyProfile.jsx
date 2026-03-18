@@ -1,3 +1,4 @@
+import React, { useState, useRef, useEffect } from "react";
 import { Loader2, Palette, UploadCloud, UserCircle } from "lucide-react";
 import { updateCompanyAdmin } from "../../services/companyAdminCloud";
 import { readSession, writeSession } from "../../services/session";
