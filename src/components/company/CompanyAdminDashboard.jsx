@@ -407,8 +407,15 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       const sg = parseInt(sHex.substring(2, 4), 16);
       const sb = parseInt(sHex.substring(4, 6), 16);
       document.documentElement.style.setProperty("--color-lavender-blue-rgb", `${sr}, ${sg}, ${sb}`);
+
+      const sLuminance = (0.299 * sr + 0.587 * sg + 0.114 * sb) / 255;
+      const sIsDarkText = sLuminance > 0.75;
+      document.documentElement.style.setProperty("--color-lavender-blue-content", sIsDarkText ? "#1f2937" : "#ffffff");
+      document.documentElement.style.setProperty("--color-lavender-blue-content-muted", sIsDarkText ? "#1f2937cc" : "#ffffffcc");
     } else {
       document.documentElement.style.setProperty("--color-lavender-blue-rgb", `154, 166, 214`);
+      document.documentElement.style.setProperty("--color-lavender-blue-content", `#ffffff`);
+      document.documentElement.style.setProperty("--color-lavender-blue-content-muted", `#ffffffcc`);
     }
 
     return () => {
@@ -417,6 +424,8 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       document.documentElement.style.setProperty("--color-mint-content-muted", `#ffffffcc`);
       document.documentElement.style.setProperty("--color-mint-content-faint", `#ffffff33`);
       document.documentElement.style.setProperty("--color-lavender-blue-rgb", `154, 166, 214`);
+      document.documentElement.style.setProperty("--color-lavender-blue-content", `#ffffff`);
+      document.documentElement.style.setProperty("--color-lavender-blue-content-muted", `#ffffffcc`);
     };
   }, [companyAdmin?.themeColor, companyAdmin?.themeSecondaryColor, session?.themeColor, session?.themeSecondaryColor]);
 
@@ -891,12 +900,12 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 lg:ml-64">
-        <header className="h-20 bg-lavender-blue fixed top-0 right-0 left-0 lg:left-64 z-30 shadow-lg flex items-center justify-between px-4 lg:px-8 text-white">
+        <header className="h-20 bg-lavender-blue fixed top-0 right-0 left-0 lg:left-64 z-30 shadow-lg flex items-center justify-between px-4 lg:px-8 text-[var(--color-lavender-blue-content)]">
           <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => setIsSidebarOpen((prev) => !prev)}
-              className="p-2 hover:bg-white/10 rounded-xl transition-colors lg:hidden"
+              className="p-2 hover:bg-black/5 rounded-xl transition-colors lg:hidden"
             >
               <Menu size={24} />
             </button>
@@ -922,8 +931,8 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
               </button>
             )}
             <div className="text-right hidden sm:block">
-              <p className="text-xs lg:text-sm font-black">{companyAdminName}</p>
-              <p className="text-[8px] lg:text-[10px] font-bold opacity-60">{companyAdminEmail}</p>
+              <p className="text-sm font-black tracking-wide leading-none">{companyAdmin?.admin || "Admin"}</p>
+              <p className="text-[10px] text-[var(--color-lavender-blue-content-muted)] font-bold mt-1 tracking-wider">{companyAdmin?.email}</p>
             </div>
             <button
               type="button"
