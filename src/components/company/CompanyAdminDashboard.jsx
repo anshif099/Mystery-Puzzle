@@ -383,11 +383,11 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       document.documentElement.style.setProperty("--color-mint-rgb", `${r}, ${g}, ${b}`);
       
       const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-      const contrastHex = luminance > 0.65 ? "#1f2937" : "#ffffff";
+      const isDarkText = luminance > 0.75;
+      const contrastHex = isDarkText ? "#1f2937" : "#ffffff";
       document.documentElement.style.setProperty("--color-mint-content", contrastHex);
       
       // Compute a lighter version of the contrast hex for borders / subtle backgrounds
-      const isDarkText = luminance > 0.65;
       // Using hex opacity
       document.documentElement.style.setProperty("--color-mint-content-muted", isDarkText ? "#1f293799" : "#ffffffcc");
       document.documentElement.style.setProperty("--color-mint-content-faint", isDarkText ? "#1f293733" : "#ffffff33");
