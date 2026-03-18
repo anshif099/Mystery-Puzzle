@@ -147,12 +147,12 @@ const CountdownCard = ({ label, value }) => (
 );
 
 const SummaryCard = ({ label, value, tone = "default" }) => (
-  <div className="rounded-2xl bg-gray-50 px-3 py-3 min-w-0">
-    <p className="text-[9px] uppercase tracking-wider font-black text-gray-500 truncate" title={label}>
+  <div className="rounded-2xl bg-gray-50 px-3.5 py-2.5 min-w-[110px] flex-1 sm:flex-none">
+    <p className="text-[9px] uppercase tracking-wider font-black text-gray-400 whitespace-nowrap">
       {label}
     </p>
     <p
-      className={`mt-1 text-xl font-black truncate ${
+      className={`mt-0.5 text-lg font-black whitespace-nowrap ${
         tone === "success"
           ? "text-mint"
           : tone === "warning"
@@ -161,7 +161,6 @@ const SummaryCard = ({ label, value, tone = "default" }) => (
           ? "text-accent"
           : "text-gray-900"
       }`}
-      title={String(value)}
     >
       {value}
     </p>
@@ -1324,7 +1323,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                                   ID: {item.campaignId}
                                 </p>
 
-                                <div className="mt-4 grid grid-cols-2 lg:grid-cols-4 gap-2">
+                                <div className="mt-4 flex flex-wrap gap-2">
                                   <SummaryCard
                                     label="Difficulty"
                                     value={`${normalizeDifficultyOption(item.difficulty)} blocks`}
