@@ -56,7 +56,7 @@ const normalizeCampaign = (data, companyId, campaignId = LEGACY_CAMPAIGN_ID) => 
   timerSeconds: Number(data?.timerSeconds) || 180,
   maxAttempts: Number(data?.maxAttempts) || 3,
   campaignKey: data?.campaignKey || "",
-  revealType: data?.revealType || "blur",
+  revealType: data?.revealType === "blur" ? "always_blur" : (data?.revealType || "always_blur"),
   createdAt: Number(data?.createdAt) || Number(data?.updatedAt) || Date.now(),
   updatedAt: Number(data?.updatedAt) || Number(data?.createdAt) || Date.now(),
 });

@@ -697,7 +697,9 @@ const PlayPortal = ({
                      src={campaign.puzzleImage}
                      alt="Puzzle logo preview"
                      className={`w-full max-h-72 object-contain rounded-2xl bg-gray-50 border border-gray-100 transition-all duration-700 ${
-                       campaign?.revealType === "always_blur" || (campaign?.revealType === "preview_5s" && revealTimer === 0)
+                       campaign?.revealType === "always_blur" || 
+                       campaign?.revealType === "blur" || 
+                       (campaign?.revealType === "preview_5s" && revealTimer === 0)
                          ? "blur-2xl scale-95 opacity-80"
                          : "blur-0 scale-100 opacity-100"
                      }`}
@@ -774,7 +776,9 @@ const PlayPortal = ({
                            src={campaign.puzzleImage}
                            alt="Puzzle Preview"
                            className={`w-full h-48 object-contain rounded-2xl bg-gray-50 border border-gray-100 transition-all duration-700 ${
-                             campaign?.revealType === "always_blur" || (campaign?.revealType === "preview_5s" && revealTimer === 0)
+                             campaign?.revealType === "always_blur" || 
+                             campaign?.revealType === "blur" || 
+                             (campaign?.revealType === "preview_5s" && revealTimer === 0)
                                ? "blur-2xl scale-95 opacity-80"
                                : "blur-0 scale-100 opacity-100"
                            }`}
@@ -789,7 +793,13 @@ const PlayPortal = ({
                      )}
                     <div className="rounded-3xl border border-gray-100 bg-gray-50 p-4">
                       <div
-                        className="grid gap-1 bg-white rounded-2xl border border-gray-100 p-2 mx-auto w-full max-w-[520px]"
+                        className={`grid gap-1 bg-white rounded-2xl border border-gray-100 p-2 mx-auto w-full max-w-[520px] transition-all duration-700 ${
+                          !started && !userStats.solved && (
+                            campaign?.revealType === "always_blur" || 
+                            campaign?.revealType === "blur" || 
+                            (campaign?.revealType === "preview_5s" && revealTimer === 0)
+                          ) ? "blur-xl" : "blur-0"
+                        }`}
                         style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
                       >
                         {tiles.map((tilePieceIndex, tilePositionIndex) => {
