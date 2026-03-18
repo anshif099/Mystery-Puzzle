@@ -509,6 +509,7 @@ export const buildParticipantRows = (users, attempts) =>
       attempts: userAttempts.length,
       status: solvedAttempt ? "Solved" : latestAttempt ? "Not Solved" : "Not Solved",
       prize: solvedAttempt?.prize || latestAttempt?.prize || "",
+      shippingAddress: solvedAttempt?.shippingAddress || null,
     };
   });
 

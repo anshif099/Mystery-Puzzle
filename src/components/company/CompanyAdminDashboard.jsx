@@ -187,6 +187,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [now, setNow] = useState(Date.now());
+  const [leaderboardType, setLeaderboardType] = useState("puzzle");
 
   const features = useMemo(() => {
     const list = Array.isArray(companyAdmin?.features) 
@@ -432,7 +433,20 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
   }, [companyAdmin?.themeColor, companyAdmin?.themeSecondaryColor, session?.themeColor, session?.themeSecondaryColor]);
 
   const metrics = useMemo(() => buildOverviewMetrics(users, attempts), [users, attempts]);
-  const participants = useMemo(() => buildParticipantRows(users, attempts), [users, attempts]);
+  
+  const puzzleParticipants = useMemo(() => {
+    const puzzleIds = new Set(campaigns.map(c => c.campaignId));
+    const puzzleAttempts = attempts.filter(a => puzzleIds.has(a.campaignId));
+    return buildParticipantRows(users, puzzleAttempts);
+  }, [users, attempts, campaigns]);
+
+  const wheelParticipants = useMemo(() => {
+    const wheelIds = new Set(spinWheels.map(w => w.wheelId));
+    const wheelAttempts = attempts.filter(a => wheelIds.has(a.campaignId));
+    return buildParticipantRows(users, wheelAttempts);
+  }, [users, attempts, spinWheels]);
+
+  const participants = leaderboardType === "puzzle" ? puzzleParticipants : wheelParticipants;
   const allowedCampaigns = Math.max(0, Number(companyAdmin?.campaigns ?? session?.campaigns ?? 0));
   const activeCampaignCount = useMemo(
     () => campaigns.filter((item) => item.isActive).length,
@@ -1005,9 +1019,34 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                 </div>
 
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-gray-100">
-                    <h3 className="text-2xl font-black text-gray-900">Participant Data</h3>
-                    <p className="text-gray-500 mt-2">Live updates from your campaign players.</p>
+                  <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-2xl font-black text-gray-900">Participant Data</h3>
+                      <p className="text-gray-500 mt-1">Live updates from your campaign players.</p>
+                    </div>
+
+                    <div className="flex bg-gray-100 p-1 rounded-2xl self-start">
+                      <button
+                        onClick={() => setLeaderboardType("puzzle")}
+                        className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+                          leaderboardType === "puzzle"
+                            ? "bg-white text-gray-900 shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        Puzzle
+                      </button>
+                      <button
+                        onClick={() => setLeaderboardType("wheel")}
+                        className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+                          leaderboardType === "wheel"
+                            ? "bg-white text-gray-900 shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                        }`}
+                      >
+                        Spin Wheel
+                      </button>
+                    </div>
                   </div>
 
                   <div className="overflow-x-auto">
@@ -1018,10 +1057,10 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                             "Name",
                             "Email",
                             "Phone",
-                            "Completion Time",
-                            "Prize",
+                            leaderboardType === "puzzle" ? "Time" : "Prize",
                             "Attempts",
                             "Status",
+                            "Shipping Details",
                           ].map((head) => (
                             <th
                               key={head}
@@ -1044,15 +1083,16 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                           </tr>
                         ) : (
                           participants.map((row) => (
-                            <tr key={row.userId} className="border-t border-gray-100">
+                            <tr key={row.userId} className="border-t border-gray-100 group hover:bg-gray-50/50 transition-colors">
                               <td className="px-6 py-4 font-bold text-gray-800">{row.name}</td>
                               <td className="px-6 py-4 font-medium text-gray-600">{row.email}</td>
                               <td className="px-6 py-4 font-medium text-gray-600">{row.phone}</td>
-                              <td className="px-6 py-4 font-black text-gray-800">
-                                {row.completionTime}
-                              </td>
-                              <td className="px-6 py-4 font-bold text-mint uppercase truncate max-w-[150px]">
-                                {row.prize || "--"}
+                              <td className="px-6 py-4 font-black transition-all">
+                                {leaderboardType === "puzzle" ? (
+                                  <span className="text-sky-blue">{row.completionTime}</span>
+                                ) : (
+                                  <span className="text-mint uppercase">{row.prize || "--"}</span>
+                                )}
                               </td>
                               <td className="px-6 py-4 font-black text-gray-700">
                                 {row.attempts}
@@ -1067,6 +1107,20 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                                 >
                                   {row.status}
                                 </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                {row.shippingAddress ? (
+                                  <div className="text-[11px] leading-relaxed">
+                                    <p className="font-bold text-gray-900">{row.shippingAddress.fullName}</p>
+                                    <p className="text-gray-600 tabular-nums">{row.shippingAddress.mobile}</p>
+                                    <p className="text-gray-500 italic max-w-[200px] line-clamp-1 group-hover:line-clamp-none transition-all">
+                                      {row.shippingAddress.location}
+                                    </p>
+                                    <p className="text-gray-400 font-bold">PIN: {row.shippingAddress.pincode}</p>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-400 italic text-xs">No address</span>
+                                )}
                               </td>
                             </tr>
                           ))
