@@ -13,6 +13,7 @@ import {
   Trash2,
   UploadCloud,
   RotateCcw,
+  Trophy,
   UserCircle,
 } from "lucide-react";
 import {
@@ -71,7 +72,6 @@ const buildEmptyWheelDraft = () => ({
     { name: "Prize 4", image: "", chance: 25 },
   ],
 });
-
 const toDraft = (campaign) =>
   campaign
     ? {
@@ -801,11 +801,12 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
   };
 
   const titleByTab = {
-    dashboard: "Company Dashboard",
-    profile: "Company Profile",
+    dashboard: "Overview Performance",
     campaigns: "Puzzle Management",
     spin_wheel: "Spin Wheel Management",
-    subscription: "Subscription Countdown",
+    winners: "Winners & Shipping",
+    profile: "Company Profile",
+    subscription: "Subscription Status",
   };
 
   const subscriptionLabel =
@@ -878,6 +879,15 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
               }}
             />
           )}
+          <SidebarItem
+            icon={Trophy}
+            label="Winners & Shipping"
+            active={activeTab === "winners"}
+            onClick={() => {
+              setActiveTab("winners");
+              setIsSidebarOpen(false);
+            }}
+          />
           <SidebarItem
             icon={UserCircle}
             label="Company Profile"
@@ -1007,129 +1017,139 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
             )}
 
             {activeTab === "dashboard" && (
-              <>
-                <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                  <StatCard label="Total Participants" value={metrics.totalParticipants} />
-                  <StatCard label="Total Puzzle Attempts" value={metrics.totalPuzzleAttempts} />
-                  <StatCard label="Completed Puzzles" value={metrics.completedPuzzles} />
-                  <StatCard
-                    label="Average Completion Time"
-                    value={formatDuration(metrics.averageCompletionTime)}
-                  />
-                </div>
+              <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <StatCard label="Total Participants" value={metrics.totalParticipants} />
+                <StatCard label="Total Puzzle Attempts" value={metrics.totalPuzzleAttempts} />
+                <StatCard label="Completed Puzzles" value={metrics.completedPuzzles} />
+                <StatCard
+                  label="Average Completion Time"
+                  value={formatDuration(metrics.averageCompletionTime)}
+                />
+              </div>
+            )}
 
-                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-                  <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="text-2xl font-black text-gray-900">Participant Data</h3>
-                      <p className="text-gray-500 mt-1">Live updates from your campaign players.</p>
-                    </div>
-
-                    <div className="flex bg-gray-100 p-1 rounded-2xl self-start">
-                      <button
-                        onClick={() => setLeaderboardType("puzzle")}
-                        className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-                          leaderboardType === "puzzle"
-                            ? "bg-white text-gray-900 shadow-sm"
-                            : "text-gray-500 hover:text-gray-700"
-                        }`}
-                      >
-                        Puzzle
-                      </button>
-                      <button
-                        onClick={() => setLeaderboardType("wheel")}
-                        className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
-                          leaderboardType === "wheel"
-                            ? "bg-white text-gray-900 shadow-sm"
-                            : "text-gray-500 hover:text-gray-700"
-                        }`}
-                      >
-                        Spin Wheel
-                      </button>
-                    </div>
+            {activeTab === "winners" && (
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
+                <div className="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-2xl font-black text-gray-900">Winners & Participants</h3>
+                    <p className="text-gray-500 mt-1">Manage prizes and shipping for your campaign winners.</p>
                   </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[860px] text-left">
-                      <thead>
-                        <tr className="bg-gray-50/80">
-                          {[
-                            "Name",
-                            "Email",
-                            "Phone",
-                            leaderboardType === "puzzle" ? "Time" : "Prize",
-                            "Attempts",
-                            "Status",
-                            "Shipping Details",
-                          ].map((head) => (
-                            <th
-                              key={head}
-                              className="px-6 py-4 text-xs uppercase tracking-widest font-black text-gray-500"
-                            >
-                              {head}
-                            </th>
-                          ))}
+                  <div className="flex bg-gray-100 p-1.5 rounded-2xl self-start">
+                    <button
+                      onClick={() => setLeaderboardType("puzzle")}
+                      className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+                        leaderboardType === "puzzle"
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      Puzzle
+                    </button>
+                    <button
+                      onClick={() => setLeaderboardType("wheel")}
+                      className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
+                        leaderboardType === "wheel"
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
+                      }`}
+                    >
+                      Spin Wheel
+                    </button>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1000px] text-left">
+                    <thead>
+                      <tr className="bg-gray-50/80">
+                        {[
+                          "Name",
+                          "Email",
+                          "Phone",
+                          leaderboardType === "puzzle" ? "Time" : "Prize Won",
+                          "Attempts",
+                          "Status",
+                          "Shipping Address",
+                        ].map((head) => (
+                          <th
+                            key={head}
+                            className="px-6 py-4 text-xs uppercase tracking-widest font-black text-gray-500"
+                          >
+                            {head}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {participants.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan="7"
+                            className="px-6 py-12 text-center text-gray-400 font-semibold"
+                          >
+                            No participation records found for this category.
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {participants.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan="7"
-                              className="px-6 py-8 text-center text-gray-400 font-semibold"
-                            >
-                              No participants yet.
+                      ) : (
+                        participants.map((row) => (
+                          <tr key={row.userId} className="border-t border-gray-100 group hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <p className="font-bold text-gray-900 line-clamp-1">{row.name}</p>
+                            </td>
+                            <td className="px-6 py-4 font-medium text-gray-600">{row.email}</td>
+                            <td className="px-6 py-4 font-medium text-gray-500 tabular-nums lowercase">{row.phone}</td>
+                            <td className="px-6 py-4 font-black">
+                              {leaderboardType === "puzzle" ? (
+                                <span className="text-sky-blue">{row.completionTime}</span>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <span className="w-2 h-2 rounded-full bg-mint animate-pulse"></span>
+                                  <span className="text-mint uppercase tracking-wider">{row.prize || "No Prize"}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 font-black text-gray-700 italic">
+                              {row.attempts} attempts
+                            </td>
+                            <td className="px-6 py-4">
+                              <span
+                                className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${
+                                  row.status === "Solved"
+                                    ? "bg-mint/10 text-mint border border-mint/20"
+                                    : "bg-gray-100 text-gray-500"
+                                }`}
+                              >
+                                {row.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-5">
+                              {row.shippingAddress ? (
+                                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 group-hover:bg-white transition-colors">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="font-black text-gray-900 text-xs uppercase">{row.shippingAddress.fullName}</p>
+                                    <span className="text-[10px] bg-sky-blue/10 text-sky-blue px-2 py-0.5 rounded-lg font-bold">SHIP</span>
+                                  </div>
+                                  <p className="text-gray-700 font-bold mb-1 text-[11px] tabular-nums">{row.shippingAddress.mobile}</p>
+                                  <p className="text-gray-500 text-[11px] leading-relaxed line-clamp-2 group-hover:line-clamp-none">
+                                    {row.shippingAddress.location}
+                                  </p>
+                                  <div className="mt-2 text-[10px] font-black text-gray-400 uppercase tracking-tighter">
+                                    PIN: {row.shippingAddress.pincode}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-300 italic text-[11px]">Details not submitted</span>
+                              )}
                             </td>
                           </tr>
-                        ) : (
-                          participants.map((row) => (
-                            <tr key={row.userId} className="border-t border-gray-100 group hover:bg-gray-50/50 transition-colors">
-                              <td className="px-6 py-4 font-bold text-gray-800">{row.name}</td>
-                              <td className="px-6 py-4 font-medium text-gray-600">{row.email}</td>
-                              <td className="px-6 py-4 font-medium text-gray-600">{row.phone}</td>
-                              <td className="px-6 py-4 font-black transition-all">
-                                {leaderboardType === "puzzle" ? (
-                                  <span className="text-sky-blue">{row.completionTime}</span>
-                                ) : (
-                                  <span className="text-mint uppercase">{row.prize || "--"}</span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 font-black text-gray-700">
-                                {row.attempts}
-                              </td>
-                              <td className="px-6 py-4">
-                                <span
-                                  className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                                    row.status === "Solved"
-                                      ? "bg-mint/10 text-mint"
-                                      : "bg-gray-200 text-gray-600"
-                                  }`}
-                                >
-                                  {row.status}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4">
-                                {row.shippingAddress ? (
-                                  <div className="text-[11px] leading-relaxed">
-                                    <p className="font-bold text-gray-900">{row.shippingAddress.fullName}</p>
-                                    <p className="text-gray-600 tabular-nums">{row.shippingAddress.mobile}</p>
-                                    <p className="text-gray-500 italic max-w-[200px] line-clamp-1 group-hover:line-clamp-none transition-all">
-                                      {row.shippingAddress.location}
-                                    </p>
-                                    <p className="text-gray-400 font-bold">PIN: {row.shippingAddress.pincode}</p>
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-400 italic text-xs">No address</span>
-                                )}
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
-              </>
+              </div>
             )}
 
             {activeTab === "campaigns" && (
