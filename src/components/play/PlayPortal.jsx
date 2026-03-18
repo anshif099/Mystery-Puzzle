@@ -167,6 +167,7 @@ const PlayPortal = ({
   const [isSpinning, setIsSpinning] = useState(false);
   const [winner, setWinner] = useState(null);
   const touchStartRef = useRef(null);
+  const puzzleStartTimeRef = useRef(null);
 
   useEffect(() => {
     if (!companyId) {
@@ -375,6 +376,7 @@ const PlayPortal = ({
     const nextTiles = shuffleSlidingTiles(solvedTiles, rows, cols);
     setTiles(nextTiles);
     setTimerLeft(Number(campaign.timerSeconds) || 180);
+    puzzleStartTimeRef.current = Date.now(); // Record puzzle start time
     setStarted(true);
   };
 
@@ -400,13 +402,13 @@ const PlayPortal = ({
       ];
 
       if (isSolvedArrangement(nextTiles, solvedTiles)) {
-        const completionTime = Math.max(
-          0,
-          Number(campaign?.timerSeconds || 180) - Number(timerLeft || 0)
-        );
+        // Calculate actual elapsed time from puzzle start
+        const elapsedSeconds = puzzleStartTimeRef.current
+          ? Math.round((Date.now() - puzzleStartTimeRef.current) / 1000)
+          : Math.max(0, Number(campaign?.timerSeconds || 180) - Number(timerLeft || 0));
         setStarted(false);
         setMessage("Puzzle solved. Saving result...");
-        setTimeout(() => submitAttempt("solved", completionTime), 0);
+        setTimeout(() => submitAttempt("solved", elapsedSeconds), 0);
       }
 
       return nextTiles;
