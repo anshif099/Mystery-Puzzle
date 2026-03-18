@@ -852,11 +852,11 @@ const PlayPortal = ({
                                   style={{ transform: `rotate(${contentRotation}deg)` }}
                                 >
                                   <div 
-                                    className="absolute top-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 w-24 pointer-events-none"
+                                    className="absolute top-[22%] left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none"
                                     style={{ transform: 'rotate(0deg)' }}
                                   >
                                     {item.image && (
-                                      <div className="w-16 h-16 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white shrink-0">
+                                      <div className="w-20 h-20 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-white shrink-0">
                                         <img 
                                           src={item.image} 
                                           alt="" 
@@ -864,9 +864,6 @@ const PlayPortal = ({
                                         />
                                       </div>
                                     )}
-                                    <p className="text-[11px] font-black text-white uppercase tracking-tight text-center leading-tight drop-shadow-lg px-2 max-w-full break-words">
-                                      {item.name}
-                                    </p>
                                   </div>
                                 </div>
                               );
