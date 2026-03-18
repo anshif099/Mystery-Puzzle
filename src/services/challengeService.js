@@ -79,6 +79,7 @@ const normalizeAttempt = (data, attemptId) => ({
   attemptNumber: Number(data?.attemptNumber) || 1,
   completionTimeSec: Number(data?.completionTimeSec) || 0,
   status: data?.status === "solved" ? "solved" : "failed",
+  prize: data?.prize || "",
   timestamp: Number(data?.timestamp) || Date.now(),
 });
 
@@ -387,6 +388,7 @@ export const saveAttempt = async ({
   user,
   status,
   completionTimeSec,
+  prize = "",
 }) => {
   ensureDb();
   const attempts = await getAttemptsByCompany(companyId);
@@ -408,6 +410,7 @@ export const saveAttempt = async ({
     attemptNumber,
     completionTimeSec: Number(completionTimeSec) || 0,
     status: status === "solved" ? "solved" : "failed",
+    prize: prize || "",
     timestamp: Date.now(),
   };
 
@@ -465,11 +468,12 @@ export const subscribeAttempts = (companyId, callback) => {
 export const buildOverviewMetrics = (users, attempts) => {
   const solvedAttempts = attempts.filter((item) => item.status === "solved");
   const solvedUsers = new Set(solvedAttempts.map((item) => item.userId));
+  const timedAttempts = solvedAttempts.filter((item) => Number(item.completionTimeSec || 0) > 0);
   const average =
-    solvedAttempts.length > 0
+    timedAttempts.length > 0
       ? Math.round(
-          solvedAttempts.reduce((sum, item) => sum + Number(item.completionTimeSec || 0), 0) /
-            solvedAttempts.length
+          timedAttempts.reduce((sum, item) => sum + Number(item.completionTimeSec || 0), 0) /
+            timedAttempts.length
         )
       : 0;
 
@@ -486,7 +490,7 @@ export const buildParticipantRows = (users, attempts) =>
     const userAttempts = attempts.filter((item) => item.userId === user.userId);
     const solvedAttempt = userAttempts
       .filter((item) => item.status === "solved")
-      .sort((a, b) => a.completionTimeSec - b.completionTimeSec)[0];
+      .sort((a, b) => b.timestamp - a.timestamp)[0];
     const latestAttempt = userAttempts[0];
 
     return {
@@ -494,9 +498,12 @@ export const buildParticipantRows = (users, attempts) =>
       name: user.name || "Player",
       email: user.email || "--",
       phone: user.phone || "--",
-      completionTime: solvedAttempt ? formatDuration(solvedAttempt.completionTimeSec) : "--:--",
+      completionTime: solvedAttempt 
+        ? (solvedAttempt.completionTimeSec > 0 ? formatDuration(solvedAttempt.completionTimeSec) : "Solved") 
+        : "--:--",
       attempts: userAttempts.length,
       status: solvedAttempt ? "Solved" : latestAttempt ? "Not Solved" : "Not Solved",
+      prize: solvedAttempt?.prize || latestAttempt?.prize || "",
     };
   });
 

@@ -926,6 +926,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                             "Email",
                             "Phone",
                             "Completion Time",
+                            "Prize",
                             "Attempts",
                             "Status",
                           ].map((head) => (
@@ -942,7 +943,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                         {participants.length === 0 ? (
                           <tr>
                             <td
-                              colSpan="6"
+                              colSpan="7"
                               className="px-6 py-8 text-center text-gray-400 font-semibold"
                             >
                               No participants yet.
@@ -956,6 +957,9 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                               <td className="px-6 py-4 font-medium text-gray-600">{row.phone}</td>
                               <td className="px-6 py-4 font-black text-gray-800">
                                 {row.completionTime}
+                              </td>
+                              <td className="px-6 py-4 font-bold text-mint uppercase truncate max-w-[150px]">
+                                {row.prize || "--"}
                               </td>
                               <td className="px-6 py-4 font-black text-gray-700">
                                 {row.attempts}
