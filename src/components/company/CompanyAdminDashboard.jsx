@@ -374,6 +374,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
   }, [accessState, onLogout]);
 
   useLayoutEffect(() => {
+    // Primary Color
     const color = companyAdmin?.themeColor || session?.themeColor || "#63D3A4";
     const hex = color.replace("#", "");
     if (hex.length === 6) {
@@ -398,13 +399,26 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       document.documentElement.style.setProperty("--color-mint-content-faint", `#ffffff33`);
     }
 
+    // Secondary Color
+    const secondaryColor = companyAdmin?.themeSecondaryColor || session?.themeSecondaryColor || "#9AA6D6";
+    const sHex = secondaryColor.replace("#", "");
+    if (sHex.length === 6) {
+      const sr = parseInt(sHex.substring(0, 2), 16);
+      const sg = parseInt(sHex.substring(2, 4), 16);
+      const sb = parseInt(sHex.substring(4, 6), 16);
+      document.documentElement.style.setProperty("--color-lavender-blue-rgb", `${sr}, ${sg}, ${sb}`);
+    } else {
+      document.documentElement.style.setProperty("--color-lavender-blue-rgb", `154, 166, 214`);
+    }
+
     return () => {
       document.documentElement.style.setProperty("--color-mint-rgb", `99, 211, 164`);
       document.documentElement.style.setProperty("--color-mint-content", `#ffffff`);
       document.documentElement.style.setProperty("--color-mint-content-muted", `#ffffffcc`);
       document.documentElement.style.setProperty("--color-mint-content-faint", `#ffffff33`);
+      document.documentElement.style.setProperty("--color-lavender-blue-rgb", `154, 166, 214`);
     };
-  }, [companyAdmin?.themeColor, session?.themeColor]);
+  }, [companyAdmin?.themeColor, companyAdmin?.themeSecondaryColor, session?.themeColor, session?.themeSecondaryColor]);
 
   const metrics = useMemo(() => buildOverviewMetrics(users, attempts), [users, attempts]);
   const participants = useMemo(() => buildParticipantRows(users, attempts), [users, attempts]);

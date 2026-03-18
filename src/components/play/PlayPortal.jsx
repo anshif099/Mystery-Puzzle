@@ -172,6 +172,7 @@ const PlayPortal = ({
   const puzzleStartTimeRef = useRef(null);
 
   useEffect(() => {
+    // Primary Color
     if (company?.themeColor) {
       const hex = company.themeColor.replace("#", "");
       if (hex.length === 6) {
@@ -186,10 +187,26 @@ const PlayPortal = ({
       document.documentElement.style.setProperty("--color-mint-rgb", `99, 211, 164`);
     }
 
+    // Secondary Color
+    if (company?.themeSecondaryColor) {
+      const sHex = company.themeSecondaryColor.replace("#", "");
+      if (sHex.length === 6) {
+        const sr = parseInt(sHex.substring(0, 2), 16);
+        const sg = parseInt(sHex.substring(2, 4), 16);
+        const sb = parseInt(sHex.substring(4, 6), 16);
+        document.documentElement.style.setProperty("--color-lavender-blue-rgb", `${sr}, ${sg}, ${sb}`);
+      } else {
+        document.documentElement.style.setProperty("--color-lavender-blue-rgb", `154, 166, 214`);
+      }
+    } else {
+      document.documentElement.style.setProperty("--color-lavender-blue-rgb", `154, 166, 214`);
+    }
+
     return () => {
       document.documentElement.style.setProperty("--color-mint-rgb", `99, 211, 164`);
+      document.documentElement.style.setProperty("--color-lavender-blue-rgb", `154, 166, 214`);
     };
-  }, [company?.themeColor]);
+  }, [company?.themeColor, company?.themeSecondaryColor]);
 
   useEffect(() => {
     if (companyId && !company) {

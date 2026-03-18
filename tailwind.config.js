@@ -14,7 +14,12 @@ export default {
           return `rgba(var(--color-mint-rgb), ${opacityValue})`;
         },
         "soft-yellow": "#E8E78E",
-        "lavender-blue": "#9AA6D6",
+        "lavender-blue": ({ opacityValue }) => {
+          if (opacityValue === undefined) {
+            return 'rgb(var(--color-lavender-blue-rgb))';
+          }
+          return `rgba(var(--color-lavender-blue-rgb), ${opacityValue})`;
+        },
         "sky-blue": "#6FA8DC",
       },
       fontFamily: {

@@ -3,7 +3,7 @@ import { Loader2, Palette, UploadCloud, UserCircle } from "lucide-react";
 import { updateCompanyAdmin } from "../../services/companyAdminCloud";
 import { readSession, writeSession } from "../../services/session";
 
-const extractProminentColor = (imgElement) => {
+const extractThemeColors = (imgElement) => {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
   canvas.width = imgElement.naturalWidth || imgElement.width;
@@ -14,8 +14,6 @@ const extractProminentColor = (imgElement) => {
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
     const data = imageData.data;
     const colorCounts = {};
-    let maxCount = 0;
-    let prominentColor = "#63D3A4";
 
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i];
@@ -33,13 +31,32 @@ const extractProminentColor = (imgElement) => {
       const key = `${rQ},${gQ},${bQ}`;
 
       colorCounts[key] = (colorCounts[key] || 0) + 1;
+    }
 
-      if (colorCounts[key] > maxCount) {
-        maxCount = colorCounts[key];
-        prominentColor = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+    const sorted = Object.entries(colorCounts).sort((a, b) => b[1] - a[1]);
+    
+    let primary = "#63D3A4";
+    let secondary = "#9AA6D6";
+
+    if (sorted.length > 0) {
+      const [pKey] = sorted[0];
+      const [pr, pg, pb] = pKey.split(',').map(Number);
+      primary = `#${((1 << 24) + (pr << 16) + (pg << 8) + pb).toString(16).slice(1)}`;
+
+      // Find a secondary color that is significantly different
+      for (let i = 1; i < sorted.length; i++) {
+        const [sKey] = sorted[i];
+        const [sr, sg, sb] = sKey.split(',').map(Number);
+        
+        const dist = Math.sqrt(Math.pow(pr - sr, 2) + Math.pow(pg - sg, 2) + Math.pow(pb - sb, 2));
+        if (dist > 60) {
+          secondary = `#${((1 << 24) + (sr << 16) + (sg << 8) + sb).toString(16).slice(1)}`;
+          break;
+        }
       }
     }
-    return prominentColor;
+
+    return { primary, secondary };
   } catch (e) {
     console.warn("Could not extract color:", e);
     return null;
@@ -49,6 +66,7 @@ const extractProminentColor = (imgElement) => {
 const CompanyProfile = ({ companyAdmin, onUpdate }) => {
   const [logo, setLogo] = useState(companyAdmin?.logo || "");
   const [themeColor, setThemeColor] = useState(companyAdmin?.themeColor || "#63D3A4");
+  const [themeSecondaryColor, setThemeSecondaryColor] = useState(companyAdmin?.themeSecondaryColor || "#9AA6D6");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -58,6 +76,7 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
   useEffect(() => {
     setLogo(companyAdmin?.logo || "");
     setThemeColor(companyAdmin?.themeColor || "#63D3A4");
+    setThemeSecondaryColor(companyAdmin?.themeSecondaryColor || "#9AA6D6");
   }, [companyAdmin]);
 
   const handleLogoUpload = (event) => {
@@ -72,9 +91,10 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
       // Load image to extract color
       const img = new Image();
       img.onload = () => {
-        const color = extractProminentColor(img);
-        if (color) {
-          setThemeColor(color);
+        const colors = extractThemeColors(img);
+        if (colors) {
+          setThemeColor(colors.primary);
+          setThemeSecondaryColor(colors.secondary);
         }
       };
       img.src = dataUrl;
@@ -95,6 +115,7 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
         ...companyAdmin,
         logo,
         themeColor,
+        themeSecondaryColor,
       });
 
       const currentSession = readSession();
@@ -102,6 +123,7 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
         writeSession({
           ...currentSession,
           themeColor: updated.themeColor,
+          themeSecondaryColor: updated.themeSecondaryColor,
           logo: updated.logo
         });
       }
@@ -174,15 +196,18 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
 
           <div className="space-y-4">
             <label className="block text-sm font-black uppercase tracking-widest text-gray-500">
-              Theme Color
+              Theme Colors
             </label>
-            <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100 h-[calc(100%-2rem)] flex flex-col justify-center">
-              <div className="flex items-center gap-4 mb-4">
+            <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100 h-[calc(100%-2rem)] flex flex-col justify-center space-y-6">
+              
+              {/* Primary Color */}
+              <div className="flex items-center gap-4">
                 <div 
-                  className="w-16 h-16 rounded-2xl shadow-inner border border-black/10" 
+                  className="w-16 h-16 rounded-2xl shadow-inner border border-black/10 shrink-0" 
                   style={{ backgroundColor: themeColor }}
                 />
-                <div className="flex-1 space-y-2 relative">
+                <div className="flex-1 space-y-1 relative">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Primary (Sidebar)</p>
                   <div className="flex items-center border border-gray-200 bg-white rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-mint transition-all">
                     <span className="pl-4 text-gray-400 font-bold">#</span>
                     <input
@@ -192,10 +217,10 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
                         const val = e.target.value.replace(/[^0-9A-Fa-f]/g, "").slice(0, 6);
                         setThemeColor(`#${val}`);
                       }}
-                      className="w-full px-2 py-3 outline-none font-bold text-gray-800 tracking-wider"
+                      className="w-full px-2 py-2 outline-none font-bold text-gray-800 tracking-wider text-sm"
                     />
-                    <label className="absolute inset-y-0 right-0 w-12 flex items-center justify-center cursor-pointer border-l border-gray-100 hover:bg-gray-50 transition-colors">
-                      <Palette size={18} className="text-gray-500" />
+                    <label className="absolute inset-y-0 right-0 w-12 flex items-center justify-center cursor-pointer border-l border-gray-100 hover:bg-gray-50 transition-colors pt-5">
+                      <Palette size={16} className="text-gray-500" />
                       <input
                         type="color"
                         value={themeColor}
@@ -206,8 +231,41 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Secondary Color */}
+              <div className="flex items-center gap-4">
+                <div 
+                  className="w-16 h-16 rounded-2xl shadow-inner border border-black/10 shrink-0" 
+                  style={{ backgroundColor: themeSecondaryColor }}
+                />
+                <div className="flex-1 space-y-1 relative">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Secondary (Header)</p>
+                  <div className="flex items-center border border-gray-200 bg-white rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-blue-400 transition-all">
+                    <span className="pl-4 text-gray-400 font-bold">#</span>
+                    <input
+                      type="text"
+                      value={themeSecondaryColor.replace("#", "").toUpperCase()}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9A-Fa-f]/g, "").slice(0, 6);
+                        setThemeSecondaryColor(`#${val}`);
+                      }}
+                      className="w-full px-2 py-2 outline-none font-bold text-gray-800 tracking-wider text-sm"
+                    />
+                    <label className="absolute inset-y-0 right-0 w-12 flex items-center justify-center cursor-pointer border-l border-gray-100 hover:bg-gray-50 transition-colors pt-5">
+                      <Palette size={16} className="text-gray-500" />
+                      <input
+                        type="color"
+                        value={themeSecondaryColor}
+                        onChange={(e) => setThemeSecondaryColor(e.target.value)}
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               <p className="text-xs font-semibold text-gray-500">
-                This color is automatically extracted from your uploaded logo, but you can adjust it here.
+                These colors are seamlessly extracted from your uploaded logo, but you can adjust them here.
               </p>
             </div>
           </div>

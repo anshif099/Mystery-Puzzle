@@ -76,6 +76,7 @@ const sanitizeCompany = (data, id) => ({
   password: data?.password || "",
   logo: data?.logo || "",
   themeColor: data?.themeColor || "",
+  themeSecondaryColor: data?.themeSecondaryColor || "",
   campaigns: Number.isFinite(Number(data?.campaigns))
     ? Number(data.campaigns)
     : 0,
@@ -91,8 +92,8 @@ const sanitizeCompany = (data, id) => ({
     ? toEndOfDayTimestamp(data.subscriptionEndDate)
     : 0,
   featuresActive: data?.featuresActive || (data?.features !== undefined),
-  features: Array.isArray(data?.features) 
-    ? data.features 
+  features: Array.isArray(data?.features)
+    ? data.features
     : (data?.features && typeof data.features === 'object')
     ? Object.entries(data.features).filter(([_, v]) => v === true).map(([k]) => k)
     : (data?.featuresActive ? [] : ["Puzzle"]),
@@ -214,6 +215,7 @@ export const createCompanyAdmin = async (payload) => {
     companyId,
     logo: payload.logo || "",
     themeColor: payload.themeColor || "",
+    themeSecondaryColor: payload.themeSecondaryColor || "",
     campaigns: Number(payload.campaigns || 0),
     status: payload.status === "Disabled" ? "Disabled" : "Active",
     subscriptionEndDate: toDateInput(payload.subscriptionEndDate),
@@ -242,6 +244,7 @@ export const updateCompanyAdmin = async (id, payload) => {
     companyId: payload.companyId || id,
     logo: payload.logo || "",
     themeColor: payload.themeColor || "",
+    themeSecondaryColor: payload.themeSecondaryColor || "",
     campaigns: Number(payload.campaigns || 0),
     status: payload.status === "Disabled" ? "Disabled" : "Active",
     subscriptionEndDate: toDateInput(payload.subscriptionEndDate || payload.subscriptionEndsAt),

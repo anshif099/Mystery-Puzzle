@@ -8,6 +8,7 @@
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   color-scheme: light;
   --color-mint-rgb: 99, 211, 164;
+  --color-lavender-blue-rgb: 154, 166, 214;
 }
 
 body {
