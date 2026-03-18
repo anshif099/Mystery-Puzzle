@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        mint: "#63D3A4",
+        mint: "rgb(var(--color-mint) / <alpha-value>)",
         "soft-yellow": "#E8E78E",
         "lavender-blue": "#9AA6D6",
         "sky-blue": "#6FA8DC",

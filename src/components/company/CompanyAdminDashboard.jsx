@@ -13,6 +13,7 @@ import {
   Trash2,
   UploadCloud,
   RotateCcw,
+  UserCircle,
 } from "lucide-react";
 import {
   buildOverviewMetrics,
@@ -38,6 +39,7 @@ import {
   setSpinWheelLiveStatus,
   subscribeSpinWheels,
 } from "../../services/spinWheelService";
+import CompanyProfile from "./CompanyProfile";
 
 const normalizeDifficultyOption = (value) => {
   const raw = Number(value);
@@ -370,6 +372,23 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     logoutTriggeredRef.current = false;
     return undefined;
   }, [accessState, onLogout]);
+
+  useEffect(() => {
+    const color = companyAdmin?.themeColor || session?.themeColor || "#63D3A4";
+    const hex = color.replace("#", "");
+    if (hex.length === 6) {
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      document.documentElement.style.setProperty("--color-mint", `${r}, ${g}, ${b}`);
+    } else {
+      document.documentElement.style.setProperty("--color-mint", `99, 211, 164`);
+    }
+
+    return () => {
+      document.documentElement.style.setProperty("--color-mint", `99, 211, 164`);
+    };
+  }, [companyAdmin?.themeColor, session?.themeColor]);
 
   const metrics = useMemo(() => buildOverviewMetrics(users, attempts), [users, attempts]);
   const participants = useMemo(() => buildParticipantRows(users, attempts), [users, attempts]);
@@ -728,6 +747,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
 
   const titleByTab = {
     dashboard: "Company Dashboard",
+    profile: "Company Profile",
     campaigns: "Puzzle Management",
     spin_wheel: "Spin Wheel Management",
     subscription: "Subscription Countdown",
@@ -756,8 +776,12 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       >
         <div className="p-8 mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/icons.png" alt="Logo" className="w-10 h-10 object-contain" />
-            <span className="text-white font-black text-lg tracking-tighter">ADMIN</span>
+            {companyAdmin?.logo ? (
+              <img src={companyAdmin.logo} alt="Company Logo" className="h-10 w-auto object-contain rounded-lg bg-white/10 p-1" />
+            ) : (
+              <img src="/icons.png" alt="Logo" className="w-10 h-10 object-contain" />
+            )}
+            <span className="text-white font-black text-lg tracking-tighter uppercase line-clamp-1">{companyName}</span>
           </div>
           <button
             type="button"
@@ -800,6 +824,15 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
               }}
             />
           )}
+          <SidebarItem
+            icon={UserCircle}
+            label="Company Profile"
+            active={activeTab === "profile"}
+            onClick={() => {
+              setActiveTab("profile");
+              setIsSidebarOpen(false);
+            }}
+          />
           <SidebarItem
             icon={Clock3}
             label="Subscription Countdown"
@@ -1750,6 +1783,13 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                   </div>
                 </div>
               </div>
+            )}
+
+            {activeTab === "profile" && (
+              <CompanyProfile 
+                companyAdmin={companyAdmin} 
+                onUpdate={(updated) => setCompanyAdmin(updated)} 
+              />
             )}
           </div>
         </main>

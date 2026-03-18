@@ -74,6 +74,8 @@ const sanitizeCompany = (data, id) => ({
   admin: data?.admin || "",
   email: data?.email || "",
   password: data?.password || "",
+  logo: data?.logo || "",
+  themeColor: data?.themeColor || "",
   campaigns: Number.isFinite(Number(data?.campaigns))
     ? Number(data.campaigns)
     : 0,
@@ -210,6 +212,8 @@ export const createCompanyAdmin = async (payload) => {
   const record = {
     ...payload,
     companyId,
+    logo: payload.logo || "",
+    themeColor: payload.themeColor || "",
     campaigns: Number(payload.campaigns || 0),
     status: payload.status === "Disabled" ? "Disabled" : "Active",
     subscriptionEndDate: toDateInput(payload.subscriptionEndDate),
@@ -236,6 +240,8 @@ export const updateCompanyAdmin = async (id, payload) => {
   const body = {
     ...payload,
     companyId: payload.companyId || id,
+    logo: payload.logo || "",
+    themeColor: payload.themeColor || "",
     campaigns: Number(payload.campaigns || 0),
     status: payload.status === "Disabled" ? "Disabled" : "Active",
     subscriptionEndDate: toDateInput(payload.subscriptionEndDate || payload.subscriptionEndsAt),

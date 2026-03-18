@@ -12,6 +12,7 @@ import {
   subscribeUsers,
   validatePlayAccess,
 } from "../../services/challengeService";
+import { getCompanyAdminById } from "../../services/companyAdminCloud";
 import {
   subscribeSpinWheel,
   validateWheelAccess,
@@ -169,6 +170,34 @@ const PlayPortal = ({
   const [revealTimer, setRevealTimer] = useState(0);
   const touchStartRef = useRef(null);
   const puzzleStartTimeRef = useRef(null);
+
+  useEffect(() => {
+    if (company?.themeColor) {
+      const hex = company.themeColor.replace("#", "");
+      if (hex.length === 6) {
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        document.documentElement.style.setProperty("--color-mint", `${r}, ${g}, ${b}`);
+      } else {
+        document.documentElement.style.setProperty("--color-mint", `99, 211, 164`);
+      }
+    } else {
+      document.documentElement.style.setProperty("--color-mint", `99, 211, 164`);
+    }
+
+    return () => {
+      document.documentElement.style.setProperty("--color-mint", `99, 211, 164`);
+    };
+  }, [company?.themeColor]);
+
+  useEffect(() => {
+    if (companyId && !company) {
+      getCompanyAdminById(companyId).then((profile) => {
+        if (profile) setCompany(profile);
+      }).catch(() => {});
+    }
+  }, [companyId, company]);
 
   useEffect(() => {
     if (campaign?.revealType === "preview_5s" && campaign?.puzzleImage) {
@@ -586,7 +615,12 @@ const PlayPortal = ({
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] text-gray-600 font-semibold">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8FAFC] text-gray-600 font-semibold gap-4">
+        <img 
+          src={company?.logo || "/icons.png"} 
+          alt="Company Logo" 
+          className="w-24 h-24 object-contain animate-pulse-subtle bg-white rounded-3xl p-2 shadow-sm border border-gray-100" 
+        />
         <span className="inline-flex items-center gap-2">
           <Loader2 size={18} className="animate-spin" />
           Loading campaign...
@@ -617,17 +651,22 @@ const PlayPortal = ({
     <div className="min-h-screen bg-[#F8FAFC] py-8 px-4">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 flex flex-wrap gap-4 justify-between items-center">
-          <div>
-            <p className="text-xs uppercase tracking-widest font-black text-gray-500">
-              Mystery Puzzle Challenge
-            </p>
-            <h1 className="text-3xl font-black text-gray-900 mt-2">{company?.name}</h1>
-            <p className="text-gray-500 font-medium mt-1">
-              Campaign Status:{" "}
-              <span className={campaign?.isActive ? "text-mint font-bold" : "text-accent font-bold"}>
-                {campaign?.isActive ? "Active" : "Inactive"}
-              </span>
-            </p>
+          <div className="flex items-center gap-4">
+            {company?.logo ? (
+              <img src={company.logo} alt="Company Logo" className="w-16 h-16 object-contain rounded-2xl bg-gray-50 border border-gray-100 p-1" />
+            ) : null}
+            <div>
+              <p className="text-xs uppercase tracking-widest font-black text-gray-500">
+                Mystery Puzzle Challenge
+              </p>
+              <h1 className="text-3xl font-black text-gray-900 mt-2">{company?.name}</h1>
+              <p className="text-gray-500 font-medium mt-1">
+                Campaign Status:{" "}
+                <span className={campaign?.isActive ? "text-mint font-bold" : "text-accent font-bold"}>
+                  {campaign?.isActive ? "Active" : "Inactive"}
+                </span>
+              </p>
+            </div>
           </div>
 
           <button
