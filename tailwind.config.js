@@ -7,7 +7,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        mint: "rgb(var(--color-mint) / <alpha-value>)",
+        mint: ({ opacityValue }) => {
+          if (opacityValue === undefined) {
+            return 'rgb(var(--color-mint-rgb))';
+          }
+          return `rgba(var(--color-mint-rgb), ${opacityValue})`;
+        },
         "soft-yellow": "#E8E78E",
         "lavender-blue": "#9AA6D6",
         "sky-blue": "#6FA8DC",

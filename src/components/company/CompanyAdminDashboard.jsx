@@ -380,7 +380,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       const r = parseInt(hex.substring(0, 2), 16);
       const g = parseInt(hex.substring(2, 4), 16);
       const b = parseInt(hex.substring(4, 6), 16);
-      document.documentElement.style.setProperty("--color-mint", `${r} ${g} ${b}`);
+      document.documentElement.style.setProperty("--color-mint-rgb", `${r}, ${g}, ${b}`);
       
       const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
       const contrastHex = luminance > 0.65 ? "#1f2937" : "#ffffff";
@@ -392,14 +392,14 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       document.documentElement.style.setProperty("--color-mint-content-muted", isDarkText ? "#1f293799" : "#ffffffcc");
       document.documentElement.style.setProperty("--color-mint-content-faint", isDarkText ? "#1f293733" : "#ffffff33");
     } else {
-      document.documentElement.style.setProperty("--color-mint", `99 211 164`);
+      document.documentElement.style.setProperty("--color-mint-rgb", `99, 211, 164`);
       document.documentElement.style.setProperty("--color-mint-content", `#ffffff`);
       document.documentElement.style.setProperty("--color-mint-content-muted", `#ffffffcc`);
       document.documentElement.style.setProperty("--color-mint-content-faint", `#ffffff33`);
     }
 
     return () => {
-      document.documentElement.style.setProperty("--color-mint", `99 211 164`);
+      document.documentElement.style.setProperty("--color-mint-rgb", `99, 211, 164`);
       document.documentElement.style.setProperty("--color-mint-content", `#ffffff`);
       document.documentElement.style.setProperty("--color-mint-content-muted", `#ffffffcc`);
       document.documentElement.style.setProperty("--color-mint-content-faint", `#ffffff33`);
