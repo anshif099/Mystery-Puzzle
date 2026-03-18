@@ -82,6 +82,7 @@ const normalizeAttempt = (data, attemptId) => ({
   completionTimeSec: Number(data?.completionTimeSec) || 0,
   status: data?.status === "solved" ? "solved" : "failed",
   prize: data?.prize || "",
+  shippingAddress: data?.shippingAddress || null,
   timestamp: Number(data?.timestamp) || Date.now(),
 });
 
@@ -391,6 +392,7 @@ export const saveAttempt = async ({
   status,
   completionTimeSec,
   prize = "",
+  shippingAddress = null,
 }) => {
   ensureDb();
   const attempts = await getAttemptsByCompany(companyId);
@@ -413,6 +415,7 @@ export const saveAttempt = async ({
     completionTimeSec: Number(completionTimeSec) || 0,
     status: status === "solved" ? "solved" : "failed",
     prize: prize || "",
+    shippingAddress: shippingAddress || null,
     timestamp: Date.now(),
   };
 

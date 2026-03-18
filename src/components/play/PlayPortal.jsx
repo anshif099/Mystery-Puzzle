@@ -168,6 +168,14 @@ const PlayPortal = ({
   const [isSpinning, setIsSpinning] = useState(false);
   const [winner, setWinner] = useState(null);
   const [revealTimer, setRevealTimer] = useState(0);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [addressFormData, setAddressFormData] = useState({
+    fullName: "",
+    mobile: "",
+    location: "",
+    pincode: "",
+  });
+  const [solvedPendingData, setSolvedPendingData] = useState(null);
   const touchStartRef = useRef(null);
   const puzzleStartTimeRef = useRef(null);
 
@@ -360,34 +368,7 @@ const PlayPortal = ({
     setTimerLeft(Number(campaign?.timerSeconds) || 180);
   }, [mode, campaign?.puzzleImage, campaign?.timerSeconds, solvedTiles, rows, cols]);
 
-  const handleGoogleLogin = async () => {
-    if (!companyId) {
-      return;
-    }
-
-    setAuthLoading(true);
-    setError("");
-    try {
-      const profile = await signInUserWithGoogle({ companyId });
-      setUser(profile);
-      setMode("game");
-      onUserSession({
-        role: "user",
-        userId: profile.userId,
-        userName: profile.name,
-        userEmail: profile.email,
-        userPhone: profile.phone,
-        provider: profile.provider,
-        companyId,
-        campaignId: activeCampaignId || campaign?.campaignId || campaignId || "",
-        companyName: company?.name || "",
-      });
-    } catch (loginError) {
-      setError(loginError?.message || "Google login failed.");
-    } finally {
-      setAuthLoading(false);
-    }
-  };
+  // handleGoogleLogin removed as per user request
 
   const handleFormLogin = async (event) => {
     event.preventDefault();
@@ -395,8 +376,8 @@ const PlayPortal = ({
       return;
     }
 
-    if (!formData.name.trim() || !formData.phone.trim()) {
-      setError("Name and phone are required.");
+    if (!formData.email.trim()) {
+      setError("Email is required to start.");
       return;
     }
 
@@ -405,14 +386,14 @@ const PlayPortal = ({
     try {
       const profile = await registerFormUser({
         companyId,
-        name: formData.name.trim(),
-        phone: formData.phone.trim(),
+        name: "", // Initial registration only needs email now
+        phone: "",
         email: formData.email.trim(),
       });
       setUser(profile);
       setMode("game");
       if (profile.alreadyExists) {
-        setMessage("Existing user found. Continuing with your previous profile.");
+        setMessage("Welcome back! Continuing with your profile.");
       }
       onUserSession({
         role: "user",
@@ -426,7 +407,7 @@ const PlayPortal = ({
         companyName: company?.name || "",
       });
     } catch (loginError) {
-      setError(loginError?.message || "User login failed.");
+      setError(loginError?.message || "Login failed.");
     } finally {
       setAuthLoading(false);
     }
@@ -467,13 +448,12 @@ const PlayPortal = ({
       ];
 
       if (isSolvedArrangement(nextTiles, solvedTiles)) {
-        // Calculate actual elapsed time from puzzle start
         const elapsedSeconds = puzzleStartTimeRef.current
           ? Math.round((Date.now() - puzzleStartTimeRef.current) / 1000)
           : Math.max(0, Number(campaign?.timerSeconds || 180) - Number(timerLeft || 0));
         setStarted(false);
-        setMessage("Puzzle solved. Saving result...");
-        setTimeout(() => submitAttempt("solved", elapsedSeconds), 0);
+        setSolvedPendingData({ status: "solved", time: elapsedSeconds });
+        setShowAddressForm(true);
       }
 
       return nextTiles;
@@ -574,14 +554,51 @@ const PlayPortal = ({
     setTimeout(() => {
       setIsSpinning(false);
       const wonItem = items[randomIndex];
-      setWinner(wonItem);
-      // For spin wheel, use 4 seconds as a baseline completion time (the spin duration)
-      const spinCompletionTime = 4;
-      submitAttempt("solved", spinCompletionTime, wonItem.name);
+      // Delay winner popup until address is submitted
+      setSolvedPendingData({ 
+        status: "solved", 
+        time: 4, 
+        prize: wonItem.name,
+        wonItem // Keep reference for the final popup
+      });
+      setShowAddressForm(true);
     }, 4100);
   };
 
-  const submitAttempt = async (status, forcedTime, prizeName = "") => {
+  const handleAddressSubmit = async (e) => {
+    e.preventDefault();
+    if (!addressFormData.fullName.trim() || !addressFormData.mobile.trim() || !addressFormData.location.trim()) {
+      setError("Please fill in Name, Mobile and Location.");
+      return;
+    }
+
+    if (!solvedPendingData) return;
+
+    setAttemptSaving(true);
+    try {
+      await submitAttempt(
+        solvedPendingData.status, 
+        solvedPendingData.time, 
+        solvedPendingData.prize || "",
+        addressFormData
+      );
+      
+      if (solvedPendingData.wonItem) {
+        setWinner(solvedPendingData.wonItem);
+      } else {
+        setMessage("Your details have been saved. Congratulations!");
+      }
+
+      setShowAddressForm(false);
+      setSolvedPendingData(null);
+    } catch (err) {
+      setError(err.message || "Failed to save address.");
+    } finally {
+      setAttemptSaving(false);
+    }
+  };
+
+  const submitAttempt = async (status, forcedTime, prizeName = "", shippingAddress = null) => {
     if (!user || !campaign || !companyId) {
       return;
     }
@@ -608,7 +625,8 @@ const PlayPortal = ({
         user,
         status,
         completionTimeSec,
-        prize: prizeName, // Adding prize to metadata
+        prize: prizeName,
+        shippingAddress,
       });
       setStarted(false);
       if (type === "puzzle") {
@@ -710,26 +728,34 @@ const PlayPortal = ({
 
         {mode === "login" ? (
           <div className="grid lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-              <h2 className="text-2xl font-black text-gray-900">Login to Play</h2>
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8">
+              <h2 className="text-2xl font-black text-gray-900">Start Challenge</h2>
               <p className="text-gray-500 mt-2">
-                Scan QR code and login with Google to start.
+                Enter your email address to continue.
               </p>
 
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={authLoading}
-                className="mt-8 w-full bg-white border-2 border-gray-200 py-4 rounded-2xl font-black hover:bg-gray-50 transition-colors disabled:opacity-60 flex items-center justify-center gap-3"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                {authLoading ? "Signing in..." : "Continue with Google"}
-              </button>
+              <form onSubmit={handleFormLogin} className="mt-8 space-y-4">
+                <div>
+                  <label className="text-xs uppercase tracking-widest font-black text-gray-500 ml-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    required
+                    placeholder="name@example.com"
+                    className="mt-2 w-full bg-gray-50 border border-gray-100 px-6 py-4 rounded-2xl font-bold focus:ring-2 focus:ring-mint outline-none transition-all"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={authLoading}
+                  className="w-full bg-mint text-white py-4 rounded-2xl font-black hover:bg-mint/90 transition-all disabled:opacity-60 shadow-lg shadow-mint/20"
+                >
+                  {authLoading ? "Checking..." : "Start Now"}
+                </button>
+              </form>
             </div>
 
             <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
@@ -1047,6 +1073,73 @@ const PlayPortal = ({
           </div>
         )}
       </div>
+      
+      {/* Shipping Address Popup */}
+      {showAddressForm && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-[40px] p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-500">
+            <h3 className="text-2xl font-black text-gray-900 text-center">Claim Your Prize!</h3>
+            <p className="text-gray-500 text-center mt-2 font-medium">Please enter your shipping details below.</p>
+            
+            <form onSubmit={handleAddressSubmit} className="mt-6 space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest font-black text-gray-400 ml-1">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={addressFormData.fullName}
+                    onChange={(e) => setAddressFormData({...addressFormData, fullName: e.target.value})}
+                    placeholder="Enter full name"
+                    className="mt-1 w-full bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl font-bold focus:ring-2 focus:ring-mint outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest font-black text-gray-400 ml-1">Mobile Number</label>
+                  <input
+                    type="tel"
+                    required
+                    value={addressFormData.mobile}
+                    onChange={(e) => setAddressFormData({...addressFormData, mobile: e.target.value})}
+                    placeholder="Enter mobile number"
+                    className="mt-1 w-full bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl font-bold focus:ring-2 focus:ring-mint outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest font-black text-gray-400 ml-1">Location / Address</label>
+                  <textarea
+                    required
+                    value={addressFormData.location}
+                    onChange={(e) => setAddressFormData({...addressFormData, location: e.target.value})}
+                    placeholder="Enter full address"
+                    rows={2}
+                    className="mt-1 w-full bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl font-bold focus:ring-2 focus:ring-mint outline-none transition-all resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase tracking-widest font-black text-gray-400 ml-1">PIN Code</label>
+                  <input
+                    type="text"
+                    required
+                    value={addressFormData.pincode}
+                    onChange={(e) => setAddressFormData({...addressFormData, pincode: e.target.value})}
+                    placeholder="Enter 6-digit PIN"
+                    className="mt-1 w-full bg-gray-50 border border-gray-100 px-4 py-3 rounded-xl font-bold focus:ring-2 focus:ring-mint outline-none transition-all"
+                  />
+                </div>
+              </div>
+              
+              <button
+                type="submit"
+                disabled={attemptSaving}
+                className="w-full bg-mint text-white py-4 rounded-2xl font-black mt-4 hover:bg-mint/90 transition-all shadow-lg shadow-mint/20 disabled:opacity-50"
+              >
+                {attemptSaving ? "Saving Details..." : "Submit & Claim"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
