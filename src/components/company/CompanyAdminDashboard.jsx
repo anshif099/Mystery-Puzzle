@@ -61,10 +61,10 @@ const buildEmptyWheelDraft = () => ({
   maxAttempts: "1",
   wheelKey: generateCampaignKey(),
   items: [
-    { name: "Prize 1", image: "" },
-    { name: "Prize 2", image: "" },
-    { name: "Prize 3", image: "" },
-    { name: "Prize 4", image: "" },
+    { name: "Prize 1", image: "", chance: 25 },
+    { name: "Prize 2", image: "", chance: 25 },
+    { name: "Prize 3", image: "", chance: 25 },
+    { name: "Prize 4", image: "", chance: 25 },
   ],
 });
 
@@ -88,10 +88,10 @@ const toWheelDraft = (wheel) =>
         maxAttempts: String(wheel.maxAttempts || 1),
         wheelKey: wheel.wheelKey || generateCampaignKey(),
         items: Array.isArray(wheel.items) ? [...wheel.items] : [
-          { name: "Prize 1", image: "" },
-          { name: "Prize 2", image: "" },
-          { name: "Prize 3", image: "" },
-          { name: "Prize 4", image: "" },
+          { name: "Prize 1", image: "", chance: 25 },
+          { name: "Prize 2", image: "", chance: 25 },
+          { name: "Prize 3", image: "", chance: 25 },
+          { name: "Prize 4", image: "", chance: 25 },
         ],
       }
     : buildEmptyWheelDraft();
@@ -1536,14 +1536,26 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                                 </label>
                               </div>
                               <div className="flex-1 min-w-[200px]">
-                                <input
-                                  type="text"
-                                  value={item.name}
-                                  placeholder="Prize name"
-                                  onChange={(e) => handleItemChange(index, "name", e.target.value)}
-                                  className="w-full bg-transparent p-2 border-b border-gray-200 outline-none focus:border-mint font-bold"
-                                />
-                              </div>
+                                  <input
+                                    type="text"
+                                    value={item.name}
+                                    placeholder="Prize name"
+                                    onChange={(e) => handleItemChange(index, "name", e.target.value)}
+                                    className="w-full bg-transparent p-2 border-b border-gray-200 outline-none focus:border-mint font-bold"
+                                  />
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <span className="text-[10px] font-black text-gray-400">WIN CHANCE:</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      value={item.chance || 0}
+                                      onChange={(e) => handleItemChange(index, "chance", Number(e.target.value))}
+                                      className="w-20 bg-white/50 px-2 py-1 rounded-lg border border-gray-100 outline-none focus:border-mint text-xs font-bold"
+                                    />
+                                    <span className="text-[10px] font-bold text-gray-400">%</span>
+                                  </div>
+                                </div>
                               <button
                                 type="button"
                                 onClick={() => handleRemoveItem(index)}

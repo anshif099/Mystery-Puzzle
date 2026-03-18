@@ -461,7 +461,24 @@ const PlayPortal = ({
 
     const items = campaign.items;
     const segmentAngle = 360 / items.length;
-    const randomIndex = Math.floor(Math.random() * items.length);
+    
+    // Weighted Selection
+    let totalWeight = items.reduce((sum, item) => sum + (Number(item.chance) || 0), 0);
+    let randomIndex = 0;
+    
+    if (totalWeight > 0) {
+      const random = Math.random() * totalWeight;
+      let accumulated = 0;
+      for (let i = 0; i < items.length; i++) {
+        accumulated += Number(items[i].chance) || 0;
+        if (random <= accumulated) {
+          randomIndex = i;
+          break;
+        }
+      }
+    } else {
+      randomIndex = Math.floor(Math.random() * items.length);
+    }
     
     // Calculate rotation with random offset within the segment
     const extraSpins = 8 + Math.floor(Math.random() * 5);
@@ -835,17 +852,19 @@ const PlayPortal = ({
                                   style={{ transform: `rotate(${contentRotation}deg)` }}
                                 >
                                   <div 
-                                    className="absolute top-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 w-28 pointer-events-none"
-                                    style={{ transform: 'rotate(0deg)' }} // Already oriented radially by parent rotation
+                                    className="absolute top-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 w-24 pointer-events-none"
+                                    style={{ transform: 'rotate(0deg)' }}
                                   >
                                     {item.image && (
-                                      <img 
-                                        src={item.image} 
-                                        alt="" 
-                                        className="w-14 h-14 rounded-full border-4 border-white shadow-lg object-cover bg-white" 
-                                      />
+                                      <div className="w-16 h-16 rounded-full border-4 border-white shadow-xl overflow-hidden bg-white shrink-0">
+                                        <img 
+                                          src={item.image} 
+                                          alt="" 
+                                          className="w-full h-full object-cover" 
+                                        />
+                                      </div>
                                     )}
-                                    <p className="text-[12px] font-black text-white uppercase tracking-tight text-center leading-none drop-shadow-md px-1 max-w-full overflow-hidden">
+                                    <p className="text-[11px] font-black text-white uppercase tracking-tight text-center leading-tight drop-shadow-lg px-2 max-w-full break-words">
                                       {item.name}
                                     </p>
                                   </div>
