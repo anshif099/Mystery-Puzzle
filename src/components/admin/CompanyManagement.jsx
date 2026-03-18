@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Plus, Edit2, Trash2, Eye, Loader2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, Loader2, LogIn } from "lucide-react";
 import {
   cloudCompanyAdminConfigured,
   createCompanyAdmin,
@@ -10,6 +10,7 @@ import {
   getCompanyAdminsCached,
   updateCompanyAdmin,
 } from "../../services/companyAdminCloud";
+import { readSession, writeSession } from "../../services/session";
 
 const initialForm = {
   name: "",
@@ -255,6 +256,34 @@ const CompanyManagement = () => {
     }
   };
 
+  const handleLoginAs = (company) => {
+    const currentSession = readSession();
+    
+    // Attempt to parse subscriptionEndsAt correctly
+    let subEndsAt = Number(company.subscriptionEndsAt || 0);
+    if (!subEndsAt && company.subscriptionEndDate) {
+      subEndsAt = new Date(company.subscriptionEndDate).getTime();
+    }
+    
+    const nextSession = {
+      role: "company_admin",
+      adminId: company.id,
+      companyId: company.id,
+      companyName: company.name,
+      name: company.admin,
+      email: company.email,
+      subscriptionEndDate: company.subscriptionEndDate || "",
+      subscriptionEndsAt: subEndsAt,
+      features: company.features || ["Puzzle"],
+      isImpersonating: true,
+      originalSession: currentSession,
+      loggedAt: Date.now(),
+    };
+    
+    writeSession(nextSession);
+    window.location.href = "/";
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center gap-4">
@@ -373,6 +402,13 @@ const CompanyManagement = () => {
                   </td>
                   <td className="px-8 py-6">
                     <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleLoginAs(company)}
+                        className="p-2 text-gray-400 hover:text-lavender-blue hover:bg-lavender-blue/10 rounded-lg transition-all"
+                        title="Login as Company Admin"
+                      >
+                        <LogIn size={18} />
+                      </button>
                       <button
                         onClick={() => handleStatusToggle(company)}
                         className="p-2 text-gray-400 hover:text-sky-blue hover:bg-sky-blue/10 rounded-lg transition-all"

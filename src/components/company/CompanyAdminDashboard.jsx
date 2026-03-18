@@ -26,6 +26,7 @@ import {
   subscribeCampaigns,
   subscribeUsers,
 } from "../../services/challengeService";
+import { writeSession } from "../../services/session";
 import {
   formatSubscriptionDate,
   getCompanyAdminAccessState,
@@ -191,6 +192,13 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       : ["Puzzle"];
     return list;
   }, [companyAdmin, session]);
+
+  const handleBackToSuperAdmin = () => {
+    if (session?.originalSession) {
+      writeSession({ ...session.originalSession, loggedAt: Date.now() });
+      window.location.href = "/";
+    }
+  };
 
   const logoutTriggeredRef = useRef(false);
 
@@ -842,6 +850,15 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
           </div>
 
           <div className="flex items-center gap-3 lg:gap-5">
+            {session?.isImpersonating && (
+              <button
+                type="button"
+                onClick={handleBackToSuperAdmin}
+                className="bg-accent/10 text-accent font-bold px-4 py-2 rounded-xl text-xs hover:bg-accent hover:text-white transition-all whitespace-nowrap hidden sm:block"
+              >
+                Back to Super Admin
+              </button>
+            )}
             <div className="text-right hidden sm:block">
               <p className="text-xs lg:text-sm font-black">{companyAdminName}</p>
               <p className="text-[8px] lg:text-[10px] font-bold opacity-60">{companyAdminEmail}</p>
