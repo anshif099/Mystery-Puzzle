@@ -805,37 +805,55 @@ const PlayPortal = ({
                       style={{ transform: `rotate(${rotation}deg)` }}
                     >
                       {campaign.items && campaign.items.length > 0 ? (
-                        campaign.items.map((item, index) => {
-                          const angle = 360 / campaign.items.length;
-                          const bgColors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEEAD", "#D4A5A5", "#9B59B6", "#34495E"];
-                          return (
-                            <div
-                              key={index}
-                              className="absolute top-0 right-0 w-1/2 h-1/2 origin-bottom-left"
-                              style={{
-                                transform: `rotate(${index * angle}deg) skewY(${(90 - angle)}deg)`,
-                                backgroundColor: bgColors[index % bgColors.length],
-                                border: '1px solid rgba(0,0,0,0.1)'
-                              }}
-                            >
-                              <div 
-                                className="absolute bottom-4 left-4 origin-bottom-left"
+                        <>
+                          {/* Background Segments */}
+                          {campaign.items.map((_, index) => {
+                            const angle = 360 / campaign.items.length;
+                            const bgColors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEEAD", "#D4A5A5", "#9B59B6", "#34495E"];
+                            return (
+                              <div
+                                key={index}
+                                className="absolute top-0 right-0 w-1/2 h-1/2 origin-bottom-left"
                                 style={{
-                                  transform: `skewY(${-(90 - angle)}deg) rotate(${angle/2}deg)`,
-                                  width: '100px',
-                                  textAlign: 'center'
+                                  transform: `rotate(${index * angle}deg) skewY(${(90 - angle)}deg)`,
+                                  backgroundColor: bgColors[index % bgColors.length],
+                                  border: '1px solid rgba(0,0,0,0.1)'
                                 }}
-                              >
-                                <p className="text-[10px] font-black text-white uppercase tracking-tighter w-full overflow-hidden whitespace-nowrap">
-                                  {item.name}
-                                </p>
-                                {item.image && (
-                                  <img src={item.image} alt={item.name} className="w-10 h-10 mx-auto mt-1 rounded-full border-2 border-white/50 object-cover" />
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })
+                              />
+                            );
+                          })}
+
+                          {/* Item Content (Text and Images) */}
+                          <div className="absolute inset-0 z-10">
+                            {campaign.items.map((item, index) => {
+                              const angle = 360 / campaign.items.length;
+                              const contentRotation = index * angle + angle / 2;
+                              return (
+                                <div 
+                                  key={index} 
+                                  className="absolute inset-0 origin-center"
+                                  style={{ transform: `rotate(${contentRotation}deg)` }}
+                                >
+                                  <div 
+                                    className="absolute top-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 w-28 pointer-events-none"
+                                    style={{ transform: 'rotate(0deg)' }} // Already oriented radially by parent rotation
+                                  >
+                                    {item.image && (
+                                      <img 
+                                        src={item.image} 
+                                        alt="" 
+                                        className="w-14 h-14 rounded-full border-4 border-white shadow-lg object-cover bg-white" 
+                                      />
+                                    )}
+                                    <p className="text-[12px] font-black text-white uppercase tracking-tight text-center leading-none drop-shadow-md px-1 max-w-full overflow-hidden">
+                                      {item.name}
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400 font-bold">
                            No Items Set
