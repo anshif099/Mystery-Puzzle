@@ -1136,8 +1136,9 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                             }
                             className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
                           >
-                            <option value="blur">Blur for 5 Seconds</option>
-                            <option value="full">Fully Show</option>
+                             <option value="always_blur">Always Blurred</option>
+                             <option value="preview_5s">Show for 5 Seconds, then Blur</option>
+                             <option value="always_show">Always Visible</option>
                           </select>
                         </div>
 

@@ -171,7 +171,7 @@ const PlayPortal = ({
   const puzzleStartTimeRef = useRef(null);
 
   useEffect(() => {
-    if (campaign?.revealType === "blur" && campaign?.puzzleImage) {
+    if (campaign?.revealType === "preview_5s" && campaign?.puzzleImage) {
       setRevealTimer(5);
       const interval = setInterval(() => {
         setRevealTimer((prev) => {
@@ -697,16 +697,18 @@ const PlayPortal = ({
                      src={campaign.puzzleImage}
                      alt="Puzzle logo preview"
                      className={`w-full max-h-72 object-contain rounded-2xl bg-gray-50 border border-gray-100 transition-all duration-700 ${
-                       revealTimer > 0 ? "blur-2xl scale-95 opacity-80" : "blur-0 scale-100 opacity-100"
+                       campaign?.revealType === "always_blur" || (campaign?.revealType === "preview_5s" && revealTimer === 0)
+                         ? "blur-2xl scale-95 opacity-80"
+                         : "blur-0 scale-100 opacity-100"
                      }`}
                    />
-                   {revealTimer > 0 && (
+                   {campaign?.revealType === "preview_5s" && revealTimer > 0 && (
                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 rounded-2xl backdrop-blur-sm">
                        <p className="text-4xl font-black text-gray-900 animate-bounce">
                          {revealTimer}
                        </p>
                        <p className="text-sm font-bold text-gray-600 uppercase tracking-widest mt-2">
-                         Revealing Prize...
+                         Hiding Prize...
                        </p>
                      </div>
                    )}
@@ -772,13 +774,15 @@ const PlayPortal = ({
                            src={campaign.puzzleImage}
                            alt="Puzzle Preview"
                            className={`w-full h-48 object-contain rounded-2xl bg-gray-50 border border-gray-100 transition-all duration-700 ${
-                             revealTimer > 0 ? "blur-2xl scale-95" : "blur-0 scale-100"
+                             campaign?.revealType === "always_blur" || (campaign?.revealType === "preview_5s" && revealTimer === 0)
+                               ? "blur-2xl scale-95 opacity-80"
+                               : "blur-0 scale-100 opacity-100"
                            }`}
                          />
-                         {revealTimer > 0 && (
+                         {campaign?.revealType === "preview_5s" && revealTimer > 0 && (
                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 rounded-2xl backdrop-blur-sm">
-                               <p className="text-3xl font-black text-gray-900">{revealTimer}</p>
-                               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Previewing...</p>
+                             <p className="text-3xl font-black text-gray-900">{revealTimer}</p>
+                             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Hiding...</p>
                            </div>
                          )}
                        </div>
