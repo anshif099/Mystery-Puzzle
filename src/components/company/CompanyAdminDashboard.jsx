@@ -1322,22 +1322,6 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                                 <p className="mt-2 text-xs font-mono text-gray-500 break-all">
                                   ID: {item.campaignId}
                                 </p>
-
-                                <div className="mt-4 flex flex-nowrap items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                                  <SummaryCard
-                                    label="Difficulty"
-                                    value={`${normalizeDifficultyOption(item.difficulty)} blocks`}
-                                  />
-                                  <SummaryCard
-                                    label="Timer"
-                                    value={formatDuration(item.timerSeconds)}
-                                  />
-                                  <SummaryCard label="Max Attempts" value={item.maxAttempts} />
-                                  <SummaryCard
-                                    label="Updated"
-                                    value={new Date(item.updatedAt).toLocaleDateString()}
-                                  />
-                                </div>
                               </div>
 
                               <div className="flex flex-wrap gap-2 xl:justify-end">
@@ -1351,38 +1335,57 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                                 <button
                                   type="button"
                                   onClick={() => handleEditCampaign(item)}
-                                  className="inline-flex items-center gap-2 bg-sky-blue text-white px-4 py-2 rounded-2xl font-black hover:bg-sky-blue/90 transition-colors"
+                                  disabled={editingCampaignId === item.campaignId}
+                                  className="bg-sky-blue/10 text-sky-blue px-4 py-2 rounded-2xl font-black hover:bg-sky-blue hover:text-white transition-all disabled:opacity-50"
                                 >
-                                  <Pencil size={16} />
-                                  Edit
+                                  <Pencil size={18} />
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleToggleCampaign(item)}
+                                  onClick={() =>
+                                    setCampaignLiveStatus(
+                                      item.companyId,
+                                      item.campaignId,
+                                      !item.isActive
+                                    )
+                                  }
                                   disabled={saving}
-                                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl font-black transition-colors disabled:opacity-60 ${
+                                  className={`p-2 rounded-2xl font-black transition-all ${
                                     item.isActive
-                                      ? "bg-accent text-white hover:bg-accent/90"
-                                      : "bg-mint text-white hover:bg-mint/90"
+                                      ? "text-accent bg-accent/10 hover:bg-accent hover:text-white"
+                                      : "text-mint bg-mint/10 hover:bg-mint hover:text-white"
                                   }`}
                                 >
                                   {item.isActive ? (
-                                    <PauseCircle size={16} />
+                                    <PauseCircle size={20} />
                                   ) : (
-                                    <PlayCircle size={16} />
+                                    <PlayCircle size={20} />
                                   )}
-                                  {item.isActive ? "Stop" : "Start"}
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteSavedCampaign(item)}
-                                  disabled={saving}
-                                  className="inline-flex items-center gap-2 bg-white text-accent border border-red-200 px-4 py-2 rounded-2xl font-black hover:bg-red-50 transition-colors disabled:opacity-60"
+                                  onClick={() => handleDeleteCampaign(item.campaignId)}
+                                  className="bg-accent/10 text-accent px-4 py-2 rounded-2xl font-black hover:bg-accent hover:text-white transition-all"
                                 >
-                                  <Trash2 size={16} />
-                                  Delete
+                                  <Trash2 size={18} />
                                 </button>
                               </div>
+                            </div>
+
+                            <div className="mt-6 flex flex-nowrap items-center gap-3 overflow-x-auto pb-1 no-scrollbar border-t border-gray-100/50 pt-5">
+                              <SummaryCard
+                                label="Difficulty"
+                                value={`${normalizeDifficultyOption(item.difficulty)} blocks`}
+                              />
+                              <SummaryCard
+                                label="Timer"
+                                value={formatDuration(item.timerSeconds)}
+                              />
+                              <SummaryCard label="Max Attempts" value={item.maxAttempts} />
+                              <SummaryCard
+                                label="Updated"
+                                value={new Date(item.updatedAt).toLocaleDateString()}
+                              />
                             </div>
                           </div>
                         ))}
