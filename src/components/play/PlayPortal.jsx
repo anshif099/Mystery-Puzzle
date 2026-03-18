@@ -178,16 +178,16 @@ const PlayPortal = ({
         const r = parseInt(hex.substring(0, 2), 16);
         const g = parseInt(hex.substring(2, 4), 16);
         const b = parseInt(hex.substring(4, 6), 16);
-        document.documentElement.style.setProperty("--color-mint", `${r}, ${g}, ${b}`);
+        document.documentElement.style.setProperty("--color-mint", `${r} ${g} ${b}`);
       } else {
-        document.documentElement.style.setProperty("--color-mint", `99, 211, 164`);
+        document.documentElement.style.setProperty("--color-mint", `99 211 164`);
       }
     } else {
-      document.documentElement.style.setProperty("--color-mint", `99, 211, 164`);
+      document.documentElement.style.setProperty("--color-mint", `99 211 164`);
     }
 
     return () => {
-      document.documentElement.style.setProperty("--color-mint", `99, 211, 164`);
+      document.documentElement.style.setProperty("--color-mint", `99 211 164`);
     };
   }, [company?.themeColor]);
 

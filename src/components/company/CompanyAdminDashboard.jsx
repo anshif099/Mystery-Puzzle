@@ -120,8 +120,8 @@ const SidebarItem = ({ icon, label, active, onClick }) => {
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-6 py-4 text-left transition-all ${
         active
-          ? "bg-white/20 border-r-4 border-white text-white font-bold"
-          : "text-white/80 hover:bg-white/10 hover:text-white"
+          ? "bg-[var(--color-mint-content-faint)] border-r-4 border-[var(--color-mint-content)] text-[var(--color-mint-content)] font-bold"
+          : "text-[var(--color-mint-content-muted)] hover:bg-[var(--color-mint-content-faint)] hover:text-[var(--color-mint-content)]"
       }`}
     >
       <Icon size={20} />
@@ -380,13 +380,29 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       const r = parseInt(hex.substring(0, 2), 16);
       const g = parseInt(hex.substring(2, 4), 16);
       const b = parseInt(hex.substring(4, 6), 16);
-      document.documentElement.style.setProperty("--color-mint", `${r}, ${g}, ${b}`);
+      document.documentElement.style.setProperty("--color-mint", `${r} ${g} ${b}`);
+      
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      const contrastHex = luminance > 0.65 ? "#1f2937" : "#ffffff";
+      document.documentElement.style.setProperty("--color-mint-content", contrastHex);
+      
+      // Compute a lighter version of the contrast hex for borders / subtle backgrounds
+      const isDarkText = luminance > 0.65;
+      // Using hex opacity
+      document.documentElement.style.setProperty("--color-mint-content-muted", isDarkText ? "#1f293799" : "#ffffffcc");
+      document.documentElement.style.setProperty("--color-mint-content-faint", isDarkText ? "#1f293733" : "#ffffff33");
     } else {
-      document.documentElement.style.setProperty("--color-mint", `99, 211, 164`);
+      document.documentElement.style.setProperty("--color-mint", `99 211 164`);
+      document.documentElement.style.setProperty("--color-mint-content", `#ffffff`);
+      document.documentElement.style.setProperty("--color-mint-content-muted", `#ffffffcc`);
+      document.documentElement.style.setProperty("--color-mint-content-faint", `#ffffff33`);
     }
 
     return () => {
-      document.documentElement.style.setProperty("--color-mint", `99, 211, 164`);
+      document.documentElement.style.setProperty("--color-mint", `99 211 164`);
+      document.documentElement.style.setProperty("--color-mint-content", `#ffffff`);
+      document.documentElement.style.setProperty("--color-mint-content-muted", `#ffffffcc`);
+      document.documentElement.style.setProperty("--color-mint-content-faint", `#ffffff33`);
     };
   }, [companyAdmin?.themeColor, session?.themeColor]);
 
@@ -775,18 +791,17 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
         }`}
       >
         <div className="p-8 mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full">
             {companyAdmin?.logo ? (
-              <img src={companyAdmin.logo} alt="Company Logo" className="h-10 w-auto object-contain rounded-lg bg-white/10 p-1" />
+              <img src={companyAdmin.logo} alt="Company Logo" className="h-[3.2rem] w-auto max-w-full object-contain rounded-lg bg-[var(--color-mint-content-faint)] p-1 drop-shadow-sm" />
             ) : (
-              <img src="/icons.png" alt="Logo" className="w-10 h-10 object-contain" />
+              <img src="/icons.png" alt="Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
             )}
-            <span className="text-white font-black text-lg tracking-tighter uppercase line-clamp-1">{companyName}</span>
           </div>
           <button
             type="button"
             onClick={() => setIsSidebarOpen(false)}
-            className="p-2 bg-white/10 hover:bg-white/20 rounded-lg lg:hidden text-white"
+            className="p-2 bg-[var(--color-mint-content-faint)] hover:brightness-95 rounded-lg lg:hidden text-[var(--color-mint-content)]"
           >
             <LogOut size={18} className="rotate-180" />
           </button>
@@ -845,7 +860,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
         </nav>
 
         <div className="px-4 pb-4">
-          <div className="rounded-3xl bg-white/15 border border-white/10 p-4 text-white">
+          <div className="rounded-3xl bg-[var(--color-mint-content-faint)] border border-[var(--color-mint-content-faint)] p-4 text-[var(--color-mint-content)]">
             <p className="text-[10px] uppercase tracking-widest font-black opacity-80">
               Subscription
             </p>
@@ -856,8 +871,8 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
           </div>
         </div>
 
-        <div className="p-4 border-t border-white/10">
-          <SidebarItem icon={LogOut} label="Logout" onClick={onLogout} />
+        <div className="p-4 border-t border-[var(--color-mint-content-faint)]">
+          <SidebarItem icon={LogOut} label="Logout" onClick={onLogout} active={false} />
         </div>
       </aside>
 
