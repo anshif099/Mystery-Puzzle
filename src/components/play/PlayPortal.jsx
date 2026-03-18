@@ -508,7 +508,9 @@ const PlayPortal = ({
       setIsSpinning(false);
       const wonItem = items[randomIndex];
       setWinner(wonItem);
-      submitAttempt("solved", 0, wonItem.name);
+      // For spin wheel, use 4 seconds as a baseline completion time (the spin duration)
+      const spinCompletionTime = 4;
+      submitAttempt("solved", spinCompletionTime, wonItem.name);
     }, 4100);
   };
 
