@@ -53,6 +53,7 @@ const buildEmptyDraft = () => ({
   timerMinutes: "3",
   maxAttempts: "3",
   campaignKey: generateCampaignKey(),
+  revealType: "blur",
 });
 
 const buildEmptyWheelDraft = () => ({
@@ -77,6 +78,7 @@ const toDraft = (campaign) =>
         timerMinutes: String(Math.max(1, Math.round((campaign.timerSeconds || 180) / 60))),
         maxAttempts: String(campaign.maxAttempts || 3),
         campaignKey: campaign.campaignKey || generateCampaignKey(),
+        revealType: campaign.revealType || "blur",
       }
     : buildEmptyDraft();
 
@@ -510,6 +512,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
             .trim()
             .toUpperCase(),
         isActive: currentEditingCampaign?.isActive || false,
+        revealType: draft.revealType || "blur",
       };
       const saved = await saveCampaign(companyId, payload, editingCampaignId);
       setSelectedCampaignId(saved.campaignId);
@@ -1120,6 +1123,22 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                             }
                             className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none font-mono"
                           />
+                        </div>
+ 
+                        <div className="space-y-2">
+                          <label className="text-xs font-black uppercase tracking-widest text-gray-500">
+                            Reveal Image
+                          </label>
+                          <select
+                            value={draft.revealType}
+                            onChange={(event) =>
+                              handleDraftChange("revealType", event.target.value)
+                            }
+                            className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+                          >
+                            <option value="blur">Blur for 5 Seconds</option>
+                            <option value="full">Fully Show</option>
+                          </select>
                         </div>
 
                         <div className="md:col-span-2 flex flex-wrap gap-3 pt-2">

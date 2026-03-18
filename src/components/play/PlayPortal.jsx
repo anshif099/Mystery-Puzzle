@@ -166,8 +166,27 @@ const PlayPortal = ({
   const [rotation, setRotation] = useState(0);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winner, setWinner] = useState(null);
+  const [revealTimer, setRevealTimer] = useState(0);
   const touchStartRef = useRef(null);
   const puzzleStartTimeRef = useRef(null);
+
+  useEffect(() => {
+    if (campaign?.revealType === "blur" && campaign?.puzzleImage) {
+      setRevealTimer(5);
+      const interval = setInterval(() => {
+        setRevealTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+    setRevealTimer(0);
+    return undefined;
+  }, [campaign?.campaignId, campaign?.revealType, campaign?.puzzleImage]);
 
   useEffect(() => {
     if (!companyId) {
@@ -672,13 +691,27 @@ const PlayPortal = ({
                   </span>
                 </p>
               </div>
-              {type === "puzzle" && campaign?.puzzleImage && (
-                <img
-                  src={campaign.puzzleImage}
-                  alt="Puzzle logo preview"
-                  className="mt-5 w-full max-h-72 object-contain rounded-2xl bg-gray-50 border border-gray-100"
-                />
-              )}
+               {type === "puzzle" && campaign?.puzzleImage && (
+                 <div className="relative mt-5 group">
+                   <img
+                     src={campaign.puzzleImage}
+                     alt="Puzzle logo preview"
+                     className={`w-full max-h-72 object-contain rounded-2xl bg-gray-50 border border-gray-100 transition-all duration-700 ${
+                       revealTimer > 0 ? "blur-2xl scale-95 opacity-80" : "blur-0 scale-100 opacity-100"
+                     }`}
+                   />
+                   {revealTimer > 0 && (
+                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 rounded-2xl backdrop-blur-sm">
+                       <p className="text-4xl font-black text-gray-900 animate-bounce">
+                         {revealTimer}
+                       </p>
+                       <p className="text-sm font-bold text-gray-600 uppercase tracking-widest mt-2">
+                         Revealing Prize...
+                       </p>
+                     </div>
+                   )}
+                 </div>
+               )}
               {type === "wheel" && (
                 <div className="mt-5 bg-gray-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center border border-gray-100 italic font-medium text-gray-400">
                   <div className="text-4xl mb-3">🎡</div>
@@ -730,52 +763,71 @@ const PlayPortal = ({
                 </div>
               </div>
 
-              {type === "puzzle" ? (
-                campaign?.puzzleImage ? (
-                  <div className="mt-6 rounded-3xl border border-gray-100 bg-gray-50 p-4">
-                    <div
-                      className="grid gap-1 bg-white rounded-2xl border border-gray-100 p-2 mx-auto w-full max-w-[520px]"
-                      style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-                    >
-                      {tiles.map((tilePieceIndex, tilePositionIndex) => {
-                        const isBlank = tilePieceIndex === BLANK_TILE;
-                        const row = Math.floor(tilePieceIndex / cols);
-                        const col = tilePieceIndex % cols;
-                        const bgX = cols > 1 ? (col / (cols - 1)) * 100 : 0;
-                        const bgY = rows > 1 ? (row / (rows - 1)) * 100 : 0;
-
-                        return (
-                          <button
-                            key={`${tilePieceIndex}-${tilePositionIndex}`}
-                            type="button"
-                            onClick={() => handleTileTap(tilePositionIndex)}
-                            onTouchStart={(event) => handleTileTouchStart(tilePositionIndex, event)}
-                            onTouchEnd={(event) => handleTileTouchEnd(tilePositionIndex, event)}
-                            onTouchCancel={handleTileTouchCancel}
-                            className={`aspect-square rounded-lg border transition-all ${
-                              isBlank ? "bg-white border-gray-200" : "border-white/70"
-                            }`}
-                            style={{
-                              backgroundImage: isBlank ? "none" : `url(${campaign.puzzleImage})`,
-                              backgroundSize: isBlank
-                                ? undefined
-                                : `${cols * 100}% ${rows * 100}%`,
-                              backgroundPosition: isBlank ? undefined : `${bgX}% ${bgY}%`,
-                              backgroundRepeat: isBlank ? undefined : "no-repeat",
-                              touchAction: isBlank ? "auto" : "none",
-                            }}
-                            disabled={isBlank}
-                            aria-label={`Puzzle tile ${tilePositionIndex + 1}`}
-                          />
-                        );
-                      })}
+               {type === "puzzle" ? (
+                 campaign?.puzzleImage ? (
+                   <div className="mt-6 flex flex-col gap-6">
+                     {!started && !userStats.solved && (
+                       <div className="relative w-full max-w-md mx-auto group">
+                         <img
+                           src={campaign.puzzleImage}
+                           alt="Puzzle Preview"
+                           className={`w-full h-48 object-contain rounded-2xl bg-gray-50 border border-gray-100 transition-all duration-700 ${
+                             revealTimer > 0 ? "blur-2xl scale-95" : "blur-0 scale-100"
+                           }`}
+                         />
+                         {revealTimer > 0 && (
+                           <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 rounded-2xl backdrop-blur-sm">
+                               <p className="text-3xl font-black text-gray-900">{revealTimer}</p>
+                               <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Previewing...</p>
+                           </div>
+                         )}
+                       </div>
+                     )}
+                    <div className="rounded-3xl border border-gray-100 bg-gray-50 p-4">
+                      <div
+                        className="grid gap-1 bg-white rounded-2xl border border-gray-100 p-2 mx-auto w-full max-w-[520px]"
+                        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+                      >
+                        {tiles.map((tilePieceIndex, tilePositionIndex) => {
+                          const isBlank = tilePieceIndex === BLANK_TILE;
+                          const row = Math.floor(tilePieceIndex / cols);
+                          const col = tilePieceIndex % cols;
+                          const bgX = cols > 1 ? (col / (cols - 1)) * 100 : 0;
+                          const bgY = rows > 1 ? (row / (rows - 1)) * 100 : 0;
+  
+                          return (
+                            <button
+                              key={`${tilePieceIndex}-${tilePositionIndex}`}
+                              type="button"
+                              onClick={() => handleTileTap(tilePositionIndex)}
+                              onTouchStart={(event) => handleTileTouchStart(tilePositionIndex, event)}
+                              onTouchEnd={(event) => handleTileTouchEnd(tilePositionIndex, event)}
+                              onTouchCancel={handleTileTouchCancel}
+                              className={`aspect-square rounded-lg border transition-all ${
+                                isBlank ? "bg-white border-gray-200" : "border-white/70"
+                              }`}
+                              style={{
+                                backgroundImage: isBlank ? "none" : `url(${campaign.puzzleImage})`,
+                                backgroundSize: isBlank
+                                  ? undefined
+                                  : `${cols * 100}% ${rows * 100}%`,
+                                backgroundPosition: isBlank ? undefined : `${bgX}% ${bgY}%`,
+                                backgroundRepeat: isBlank ? undefined : "no-repeat",
+                                touchAction: isBlank ? "auto" : "none",
+                              }}
+                              disabled={isBlank}
+                              aria-label={`Puzzle tile ${tilePositionIndex + 1}`}
+                            />
+                          );
+                        })}
+                      </div>
+                      <p className="mt-3 text-sm font-semibold text-gray-500">
+                        Puzzle Difficulty: {difficultyValue} blocks ({pieceCount} movable + 1 blank)
+                      </p>
+                      <p className="mt-1 text-xs font-semibold text-gray-400">
+                        Tap or swipe a tile toward the blank area to move it.
+                      </p>
                     </div>
-                    <p className="mt-3 text-sm font-semibold text-gray-500">
-                      Puzzle Difficulty: {difficultyValue} blocks ({pieceCount} movable + 1 blank)
-                    </p>
-                    <p className="mt-1 text-xs font-semibold text-gray-400">
-                      Tap or swipe a tile toward the blank area to move it.
-                    </p>
                   </div>
                 ) : (
                   <div className="mt-6 rounded-3xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center text-gray-400 font-semibold">
