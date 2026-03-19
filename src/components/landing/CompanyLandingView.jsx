@@ -199,7 +199,11 @@ const CompanyLandingView = ({ companyId, onAuthClick, onCompanyData }) => {
 
   const isDirectVideo = (url) => {
     if (!url) return false;
-    return url.match(/\.(mp4|webm|ogg)$/i) || url.includes("firebasestorage.googleapis.com");
+    return (
+      url.match(/\.(mp4|webm|ogg)$/i) || 
+      url.includes("firebasestorage.googleapis.com") || 
+      url.startsWith("data:video/")
+    );
   };
 
   const EditableText = ({ field, component: Tag = 'span', className = "", placeholder = "", multiline = false }) => {

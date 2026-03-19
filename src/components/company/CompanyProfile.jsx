@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Loader2, Palette, UploadCloud, UserCircle } from "lucide-react";
+import { Loader2, Palette, UploadCloud, UserCircle, Video, Plus, Trash2 } from "lucide-react";
 import { updateCompanyAdmin } from "../../services/companyAdminCloud";
 import { readSession, writeSession } from "../../services/session";
 
@@ -106,6 +106,24 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
         }
       };
       img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  };
+  
+  const handleVideoUpload = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check size (e.g., 10MB limit for Data URL stability)
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Video file is too large (Max 10MB). Please use a YouTube link for larger videos.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setProfileVideo(String(reader.result || ""));
+      setMessage("Video uploaded! Don't forget to save profile.");
     };
     reader.readAsDataURL(file);
   };
@@ -328,15 +346,41 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
             Profile Video Reference (Optional)
           </label>
           <div className="flex flex-col gap-2">
-            <input
-              type="text"
-              value={profileVideo}
-              onChange={(e) => setProfileVideo(e.target.value)}
-              placeholder="YouTube URL or direct video link (MP4)"
-              className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={profileVideo}
+                onChange={(e) => setProfileVideo(e.target.value)}
+                placeholder="YouTube URL or direct video link (MP4)"
+                className="flex-1 bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+              />
+              <label className="shrink-0 w-14 h-14 bg-mint/10 text-mint rounded-2xl flex items-center justify-center cursor-pointer hover:bg-mint/20 transition-all border-2 border-dashed border-mint/30">
+                <Plus size={24} />
+                <input
+                  type="file"
+                  accept="video/*"
+                  onChange={handleVideoUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            {profileVideo && (
+              <div className="flex items-center gap-2 px-1">
+                <span className="text-[10px] font-black text-mint uppercase flex items-center gap-1">
+                  <Video size={12} />
+                  Video Ready
+                </span>
+                <button 
+                  type="button"
+                  onClick={() => setProfileVideo("")}
+                  className="text-[10px] font-black text-accent uppercase hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
             <p className="text-[10px] font-bold text-gray-400 px-1">
-              Example: https://www.youtube.com/watch?v=... or https://example.com/video.mp4
+              Example: https://www.youtube.com/watch?v=... or click <span className="text-mint">+</span> to upload (Max 10MB)
             </p>
           </div>
         </div>
