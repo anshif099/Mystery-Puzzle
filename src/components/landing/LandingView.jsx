@@ -1,18 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getRecentPrizes } from '../../services/challengeService';
 
 const LandingView = ({ onAuthClick }) => {
   const [participants, setParticipants] = useState(4326);
   const [timeLeft, setTimeLeft] = useState({ days: 2, hours: 14, minutes: 5, seconds: 48 });
-  const [recentPrizes, setRecentPrizes] = useState([]);
-
-  useEffect(() => {
-    const fetchPrizes = async () => {
-      const prizes = await getRecentPrizes(3);
-      setRecentPrizes(prizes);
-    };
-    fetchPrizes();
-  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -260,34 +250,18 @@ const LandingView = ({ onAuthClick }) => {
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              { rank: '🥇 1st Place', defaultPrize: 'Premium Prize', gradient: 'from-soft-yellow to-yellow-500' },
-              { rank: '🥈 2nd Place', defaultPrize: 'Gift Voucher', gradient: 'from-gray-100 to-gray-300' },
-              { rank: '🥉 3rd Place', defaultPrize: 'Mystery Gift', gradient: 'from-orange-100 to-orange-300' }
-            ].map((p, i) => {
-              const dynamicPrize = recentPrizes[i];
-              const prizeName = dynamicPrize?.prizeName || p.defaultPrize;
-              const prizeImage = dynamicPrize?.prizeImage;
-              
-              return (
-                <div key={i} className={`p-1 bg-gradient-to-br ${p.gradient} rounded-[40px] soft-shadow overflow-hidden group hover:-translate-y-2 transition-transform duration-300`}>
-                  <div className="bg-white h-full w-full rounded-[38px] p-6 md:p-10 flex flex-col items-center justify-center text-center">
-                    <span className="text-2xl font-black mb-2">{p.rank}</span>
-                    <div className="h-1 w-12 bg-mint mb-6 group-hover:w-24 transition-all" />
-                    {prizeImage ? (
-                      <>
-                        <img src={prizeImage} alt={prizeName} className="w-24 h-24 md:w-32 md:h-32 object-contain mb-4 drop-shadow-md rounded-xl" />
-                        <span className="text-2xl md:text-3xl font-black text-gray-800 line-clamp-2">{prizeName}</span>
-                      </>
-                    ) : (
-                      <span className="text-3xl font-black text-gray-800">{prizeName}</span>
-                    )}
-                    {dynamicPrize?.campaignTitle && (
-                      <span className="mt-3 text-sm font-bold text-gray-400 uppercase tracking-widest line-clamp-1">From: {dynamicPrize.campaignTitle}</span>
-                    )}
-                  </div>
+              { rank: '🥇 1st Place', prize: 'Premium Prize', gradient: 'from-soft-yellow to-yellow-500' },
+              { rank: '🥈 2nd Place', prize: 'Gift Voucher', gradient: 'from-gray-100 to-gray-300' },
+              { rank: '🥉 3rd Place', prize: 'Mystery Gift', gradient: 'from-orange-100 to-orange-300' }
+            ].map((p, i) => (
+              <div key={i} className={`p-1 bg-gradient-to-br ${p.gradient} rounded-[40px] soft-shadow overflow-hidden group`}>
+                <div className="bg-white h-full w-full rounded-[38px] p-10 flex flex-col items-center justify-center text-center">
+                  <span className="text-2xl font-black mb-2">{p.rank}</span>
+                  <div className="h-1 w-12 bg-mint mb-6 group-hover:w-24 transition-all" />
+                  <span className="text-3xl font-black text-gray-800">{p.prize}</span>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       </section>
