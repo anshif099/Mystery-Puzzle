@@ -15,6 +15,7 @@ import {
   RotateCcw,
   Trophy,
   UserCircle,
+  Download,
 } from "lucide-react";
 import {
   buildOverviewMetrics,
@@ -41,6 +42,7 @@ import {
   subscribeSpinWheels,
 } from "../../services/spinWheelService";
 import CompanyProfile from "./CompanyProfile";
+import { QRCodeCanvas } from "qrcode.react";
 
 const normalizeDifficultyOption = (value) => {
   const raw = Number(value);
@@ -485,14 +487,17 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       : base;
   }, [companyId, selectedCampaign]);
 
-  const qrImageSrc = useMemo(() => {
-    if (!campaignLink) {
-      return "";
-    }
-    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-      campaignLink
-    )}`;
-  }, [campaignLink]);
+  const downloadQrCode = (elementId, filename) => {
+    const canvas = document.getElementById(elementId);
+    if (!canvas) return;
+    const pngUrl = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");
+    const downloadLink = document.createElement("a");
+    downloadLink.href = pngUrl;
+    downloadLink.download = filename;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  };
 
   const wheelLink = useMemo(() => {
     if (!companyId || !selectedSpinWheel || typeof window === "undefined") {
@@ -505,13 +510,6 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
       ? `${base}&campaign=${encodeURIComponent(selectedSpinWheel.wheelKey)}`
       : base;
   }, [companyId, selectedSpinWheel]);
-
-  const wheelQrImageSrc = useMemo(() => {
-    if (!wheelLink) return "";
-    return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-      wheelLink
-    )}`;
-  }, [wheelLink]);
 
   const handleDraftChange = (field, value) => {
     setDraft((prev) => ({ ...prev, [field]: value }));
@@ -1579,12 +1577,10 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                     </p>
 
                     <div className="mt-4 rounded-2xl bg-gray-50 border border-gray-100 p-4 flex justify-center">
-                      {qrImageSrc ? (
-                        <img
-                          src={qrImageSrc}
-                          alt="Campaign QR Code"
-                          className="w-52 h-52 rounded-xl"
-                        />
+                      {campaignLink ? (
+                        <div className="bg-white p-2 rounded-xl">
+                          <QRCodeCanvas id="puzzle-qr-canvas" value={campaignLink} size={208} level="H" />
+                        </div>
                       ) : (
                         <div className="h-52 w-52 flex items-center justify-center text-center text-gray-400 font-semibold">
                           Save and select a campaign to generate QR
@@ -1608,6 +1604,16 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                       >
                         <Copy size={17} />
                         Copy Link
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => downloadQrCode("puzzle-qr-canvas", `puzzle-qr-${selectedCampaign?.campaignId || "code"}.png`)}
+                        disabled={!campaignLink}
+                        className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 bg-mint text-white py-3 rounded-2xl font-bold hover:bg-mint/90 transition-colors disabled:opacity-60"
+                      >
+                        <Download size={17} />
+                        Download QR
                       </button>
 
                       <button
@@ -1972,8 +1978,10 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                     </p>
 
                     <div className="mt-4 rounded-2xl bg-gray-50 border border-gray-100 p-4 flex justify-center">
-                      {wheelQrImageSrc ? (
-                        <img src={wheelQrImageSrc} alt="Wheel QR" className="w-52 h-52 rounded-xl" />
+                      {wheelLink ? (
+                        <div className="bg-white p-2 rounded-xl">
+                          <QRCodeCanvas id="wheel-qr-canvas" value={wheelLink} size={208} level="H" />
+                        </div>
                       ) : (
                         <div className="h-52 w-52 flex items-center justify-center text-gray-400 font-semibold text-center">
                           Save/Select a wheel to generate QR
@@ -1988,7 +1996,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                       </p>
                     </div>
 
-                    <div className="mt-4">
+                    <div className="mt-4 flex flex-col gap-3">
                       <button
                         onClick={handleCopyWheelLink}
                         disabled={!wheelLink}
@@ -1996,6 +2004,16 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                       >
                         <Copy size={20} />
                         Copy Link
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={() => downloadQrCode("wheel-qr-canvas", `wheel-qr-${selectedSpinWheel?.wheelId || "code"}.png`)}
+                        disabled={!wheelLink}
+                        className="w-full inline-flex items-center justify-center gap-2 bg-mint text-white py-4 rounded-2xl font-black hover:bg-mint/90 transition-colors disabled:opacity-60"
+                      >
+                        <Download size={20} />
+                        Download QR
                       </button>
                     </div>
                   </div>
