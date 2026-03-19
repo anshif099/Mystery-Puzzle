@@ -452,7 +452,11 @@ const PlayPortal = ({
           ? Math.round((Date.now() - puzzleStartTimeRef.current) / 1000)
           : Math.max(0, Number(campaign?.timerSeconds || 180) - Number(timerLeft || 0));
         setStarted(false);
-        setSolvedPendingData({ status: "solved", time: elapsedSeconds });
+
+        const solvedCount = attempts.filter((a) => String(a.campaignId || "") === String(activeCampaignId) && a.status === "solved").length;
+        const wonPrize = campaign?.prizes?.[solvedCount]?.name || "";
+
+        setSolvedPendingData({ status: "solved", time: elapsedSeconds, prize: wonPrize });
         setShowAddressForm(true);
       }
 
@@ -1078,7 +1082,9 @@ const PlayPortal = ({
       {showAddressForm && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-[40px] p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-500">
-            <h3 className="text-2xl font-black text-gray-900 text-center">Claim Your Prize!</h3>
+            <h3 className="text-2xl font-black text-gray-900 text-center">
+              {solvedPendingData?.prize ? `You Won ${solvedPendingData.prize}!` : "Claim Your Prize!"}
+            </h3>
             <p className="text-gray-500 text-center mt-2 font-medium">Please enter your shipping details below.</p>
             
             <form onSubmit={handleAddressSubmit} className="mt-6 space-y-4">

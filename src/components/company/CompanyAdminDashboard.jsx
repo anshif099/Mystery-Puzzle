@@ -58,6 +58,7 @@ const buildEmptyDraft = () => ({
   maxAttempts: "3",
   campaignKey: generateCampaignKey(),
   revealType: "blur",
+  prizes: [],
 });
 
 const buildEmptyWheelDraft = () => ({
@@ -82,6 +83,7 @@ const toDraft = (campaign) =>
         maxAttempts: String(campaign.maxAttempts || 3),
         campaignKey: campaign.campaignKey || generateCampaignKey(),
         revealType: campaign.revealType || "blur",
+        prizes: Array.isArray(campaign.prizes) ? [...campaign.prizes] : [],
       }
     : buildEmptyDraft();
 
@@ -517,6 +519,28 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     setError("");
   };
 
+  const handleAddPuzzlePrize = () => {
+    setDraft((prev) => ({
+      ...prev,
+      prizes: [...(prev.prizes || []), { name: `Prize ${(prev.prizes?.length || 0) + 1}` }],
+    }));
+  };
+
+  const handleRemovePuzzlePrize = (index) => {
+    setDraft((prev) => ({
+      ...prev,
+      prizes: prev.prizes.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handlePuzzlePrizeChange = (index, value) => {
+    setDraft((prev) => {
+      const nextPrizes = [...(prev.prizes || [])];
+      nextPrizes[index] = { ...nextPrizes[index], name: value };
+      return { ...prev, prizes: nextPrizes };
+    });
+  };
+
   const handleWheelDraftChange = (field, value) => {
     setWheelDraft((prev) => ({ ...prev, [field]: value }));
     setMessage("");
@@ -595,6 +619,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
             .toUpperCase(),
         isActive: currentEditingCampaign?.isActive || false,
         revealType: draft.revealType || "blur",
+        prizes: draft.prizes || [],
       };
       const saved = await saveCampaign(companyId, payload, editingCampaignId);
       setSelectedCampaignId(saved.campaignId);
@@ -1304,6 +1329,56 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                              <option value="preview_5s">Show for 5 Seconds, then Blur</option>
                              <option value="always_show">Always Visible</option>
                           </select>
+                        </div>
+
+                        <div className="md:col-span-2 space-y-4 pt-4 border-t border-gray-100">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-black uppercase tracking-widest text-gray-700">
+                              Prizes Ordered By Winner ({draft.prizes?.length || 0})
+                            </label>
+                            <button
+                              type="button"
+                              onClick={handleAddPuzzlePrize}
+                              className="text-mint font-black text-xs uppercase tracking-wider hover:underline"
+                            >
+                              + Add Prize
+                            </button>
+                          </div>
+
+                          <div className="grid gap-3">
+                            {(draft.prizes || []).map((prize, index) => (
+                              <div key={index} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100/50 flex items-center justify-between gap-4 transition-all">
+                                <div className="flex items-center gap-3 flex-1">
+                                  <div className="w-8 h-8 rounded-full bg-mint/10 text-mint font-black flex items-center justify-center text-xs shrink-0">
+                                    #{index + 1}
+                                  </div>
+                                  <div className="flex-1">
+                                    <input
+                                      type="text"
+                                      value={prize.name}
+                                      placeholder="Ex: First Prize"
+                                      onChange={(e) => handlePuzzlePrizeChange(index, e.target.value)}
+                                      className="w-full bg-transparent p-2 border-b border-gray-200 outline-none focus:border-mint font-bold"
+                                    />
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 ml-2">Awarded to Solver #{index + 1}</p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemovePuzzlePrize(index)}
+                                  className="p-2 text-accent/40 hover:text-accent shrink-0"
+                                  title="Remove Prize"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            ))}
+                            {(!draft.prizes || draft.prizes.length === 0) && (
+                              <p className="text-xs text-gray-400 font-bold italic py-2">
+                                No prizes added. Winners will just be told they solved it.
+                              </p>
+                            )}
+                          </div>
                         </div>
 
                         <div className="md:col-span-2 flex flex-wrap gap-3 pt-2">

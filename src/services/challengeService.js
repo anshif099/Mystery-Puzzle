@@ -20,6 +20,7 @@ const CAMPAIGN_FIELDS = [
   "revealType",
   "createdAt",
   "updatedAt",
+  "prizes",
 ];
 
 const ensureDb = () => {
@@ -57,6 +58,7 @@ const normalizeCampaign = (data, companyId, campaignId = LEGACY_CAMPAIGN_ID) => 
   maxAttempts: Number(data?.maxAttempts) || 3,
   campaignKey: data?.campaignKey || "",
   revealType: data?.revealType === "blur" ? "always_blur" : (data?.revealType || "always_blur"),
+  prizes: Array.isArray(data?.prizes) ? data.prizes : [],
   createdAt: Number(data?.createdAt) || Number(data?.updatedAt) || Date.now(),
   updatedAt: Number(data?.updatedAt) || Number(data?.createdAt) || Date.now(),
 });
