@@ -171,9 +171,25 @@ export const getRecentPrizes = async (limit = 3) => {
       const campaigns = extractCampaigns(companyData, companyId);
       allCampaigns.push(...campaigns);
     });
-    
-    allCampaigns.sort((a, b) => b.updatedAt - a.updatedAt);
-    
+
+    const wheelSnap = await withTimeout(
+      get(ref(realtimeDb, "spin_wheels")),
+      "Request timed out while loading spin wheels."
+    );
+    const wheelData = wheelSnap.val() || {};
+    let allWheels = [];
+    Object.entries(wheelData).forEach(([companyId, companyWheels]) => {
+       if (companyWheels && typeof companyWheels === 'object') {
+         Object.entries(companyWheels).forEach(([wheelId, wData]) => {
+             allWheels.push({
+               title: wData?.title || "Spin Wheel",
+               items: Array.isArray(wData?.items) ? wData.items : [],
+               updatedAt: Number(wData?.updatedAt) || Number(wData?.createdAt) || Date.now()
+             });
+         });
+       }
+    });
+
     const recentPrizes = [];
     for (const campaign of allCampaigns) {
       if (campaign.prizes && Array.isArray(campaign.prizes)) {
@@ -190,6 +206,24 @@ export const getRecentPrizes = async (limit = 3) => {
         });
       }
     }
+
+    for (const wheel of allWheels) {
+      if (wheel.items && Array.isArray(wheel.items)) {
+        wheel.items.forEach((p, idx) => {
+          if (p.name && !p.name.toLowerCase().includes("no prize") && !p.name.toLowerCase().includes("try again")) {
+             recentPrizes.push({
+               prizeName: p.name,
+               prizeImage: p.image || null,
+               campaignTitle: wheel.title,
+               updatedAt: wheel.updatedAt,
+               rankText: `Wheel Item`
+             });
+          }
+        });
+      }
+    }
+
+    recentPrizes.sort((a, b) => b.updatedAt - a.updatedAt);
     
     return recentPrizes.slice(0, limit);
   } catch (error) {
