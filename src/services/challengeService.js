@@ -157,6 +157,47 @@ export const getCampaign = async (companyId, campaignId = "", campaignKey = "") 
   return campaigns[0];
 };
 
+export const getRecentPrizes = async (limit = 3) => {
+  try {
+    ensureDb();
+    const snapshot = await withTimeout(
+      get(ref(realtimeDb, CAMPAIGN_PATH)),
+      "Request timed out while loading all campaigns."
+    );
+    const data = snapshot.val() || {};
+    let allCampaigns = [];
+    
+    Object.entries(data).forEach(([companyId, companyData]) => {
+      const campaigns = extractCampaigns(companyData, companyId);
+      allCampaigns.push(...campaigns);
+    });
+    
+    allCampaigns.sort((a, b) => b.updatedAt - a.updatedAt);
+    
+    const recentPrizes = [];
+    for (const campaign of allCampaigns) {
+      if (campaign.prizes && Array.isArray(campaign.prizes)) {
+        campaign.prizes.forEach((p, idx) => {
+          if (p.name) {
+             recentPrizes.push({
+               prizeName: p.name,
+               prizeImage: p.image || null,
+               campaignTitle: campaign.title,
+               updatedAt: campaign.updatedAt,
+               rankText: idx === 0 ? "Top Prize" : `Prize ${idx+1}`
+             });
+          }
+        });
+      }
+    }
+    
+    return recentPrizes.slice(0, limit);
+  } catch (error) {
+    console.error("Failed to fetch recent prizes:", error);
+    return [];
+  }
+};
+
 export const saveCampaign = async (companyId, payload, campaignId = "") => {
   ensureDb();
   const isLegacyCampaign = campaignId === LEGACY_CAMPAIGN_ID;
