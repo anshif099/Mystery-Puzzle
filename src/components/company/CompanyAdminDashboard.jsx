@@ -919,7 +919,7 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
             label="Live Campaign Page"
             active={false}
             onClick={() => {
-              window.open(`/campaign/${companyId}`, "_blank");
+              window.open(`/campaign/${companyId}?edit=true`, "_blank");
               setIsSidebarOpen(false);
             }}
           />

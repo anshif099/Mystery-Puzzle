@@ -21,6 +21,21 @@ const CAMPAIGN_FIELDS = [
   "createdAt",
   "updatedAt",
   "prizes",
+  "heroTitle",
+  "heroSubtitle",
+  "aboutTitle",
+  "aboutDescription",
+  "purposeTitle",
+  "purposeItems",
+  "howItWorksTitle",
+  "howItWorksSteps",
+  "revealTitle",
+  "revealDescription",
+  "rulesTitle",
+  "rulesDescription",
+  "rulesList",
+  "fairPlayTitle",
+  "fairPlayGuidelines",
 ];
 
 const ensureDb = () => {
@@ -61,6 +76,21 @@ const normalizeCampaign = (data, companyId, campaignId = LEGACY_CAMPAIGN_ID) => 
   prizes: Array.isArray(data?.prizes) ? data.prizes : [],
   createdAt: Number(data?.createdAt) || Number(data?.updatedAt) || Date.now(),
   updatedAt: Number(data?.updatedAt) || Number(data?.createdAt) || Date.now(),
+  heroTitle: data?.heroTitle || "",
+  heroSubtitle: data?.heroSubtitle || "",
+  aboutTitle: data?.aboutTitle || "",
+  aboutDescription: data?.aboutDescription || "",
+  purposeTitle: data?.purposeTitle || "",
+  purposeItems: Array.isArray(data?.purposeItems) ? data.purposeItems : [],
+  howItWorksTitle: data?.howItWorksTitle || "",
+  howItWorksSteps: Array.isArray(data?.howItWorksSteps) ? data.howItWorksSteps : [],
+  revealTitle: data?.revealTitle || "",
+  revealDescription: data?.revealDescription || "",
+  rulesTitle: data?.rulesTitle || "",
+  rulesDescription: data?.rulesDescription || "",
+  rulesList: Array.isArray(data?.rulesList) ? data.rulesList : [],
+  fairPlayTitle: data?.fairPlayTitle || "",
+  fairPlayGuidelines: Array.isArray(data?.fairPlayGuidelines) ? data.fairPlayGuidelines : [],
 });
 
 const normalizeUser = (data, userId) => ({
