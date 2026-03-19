@@ -21,6 +21,7 @@ export default {
           return `rgba(var(--color-lavender-blue-rgb), ${opacityValue})`;
         },
         "sky-blue": "#6FA8DC",
+        accent: "#FF6B6B",
       },
       fontFamily: {
         sans: ['Outfit', 'sans-serif'],
