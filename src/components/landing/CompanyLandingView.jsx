@@ -188,11 +188,11 @@ const CompanyLandingView = ({ companyId, onAuthClick, onCompanyData }) => {
     if (!url) return null;
     if (url.includes("youtube.com/watch?v=")) {
       const id = url.split("v=")[1]?.split("&")[0];
-      return `https://www.youtube.com/embed/${id}`;
+      return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&playlist=${id}&loop=1`;
     }
     if (url.includes("youtu.be/")) {
       const id = url.split("youtu.be/")[1]?.split("?")[0];
-      return `https://www.youtube.com/embed/${id}`;
+      return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&playlist=${id}&loop=1`;
     }
     return null;
   };
@@ -367,6 +367,10 @@ const CompanyLandingView = ({ companyId, onAuthClick, onCompanyData }) => {
               <video 
                 src={profileVideo} 
                 controls 
+                autoPlay
+                muted
+                loop
+                playsInline
                 className="w-full h-full aspect-video object-cover"
               />
             ) : (
