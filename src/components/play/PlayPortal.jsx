@@ -453,10 +453,16 @@ const PlayPortal = ({
           : Math.max(0, Number(campaign?.timerSeconds || 180) - Number(timerLeft || 0));
         setStarted(false);
 
-        const solvedCount = attempts.filter((a) => String(a.campaignId || "") === String(activeCampaignId) && a.status === "solved").length;
-        const wonPrize = campaign?.prizes?.[solvedCount]?.name || "";
+        const priorSolved = attempts.filter((a) => String(a.campaignId || "") === String(activeCampaignId) && a.status === "solved");
+        const rank = priorSolved.filter(a => Number(a.completionTimeSec || 0) <= elapsedSeconds).length;
+        const wonItem = campaign?.prizes?.[rank] || null;
 
-        setSolvedPendingData({ status: "solved", time: elapsedSeconds, prize: wonPrize });
+        setSolvedPendingData({ 
+          status: "solved", 
+          time: elapsedSeconds, 
+          prize: wonItem?.name || "", 
+          wonItem 
+        });
         setShowAddressForm(true);
       }
 
@@ -1082,8 +1088,13 @@ const PlayPortal = ({
       {showAddressForm && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-gray-900/60 backdrop-blur-sm animate-in fade-in duration-300">
           <div className="bg-white rounded-[40px] p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-500">
+            {solvedPendingData?.wonItem?.image && (
+              <div className="w-24 h-24 mx-auto mb-4 rounded-full border-4 border-mint overflow-hidden bg-gray-50 flex items-center justify-center shadow-md">
+                 <img src={solvedPendingData.wonItem.image} alt="Prize" className="w-full h-full object-cover" />
+              </div>
+            )}
             <h3 className="text-2xl font-black text-gray-900 text-center">
-              {solvedPendingData?.prize ? `You Won ${solvedPendingData.prize}!` : "Claim Your Prize!"}
+              {solvedPendingData?.prize ? `Congratulations! You got ${solvedPendingData.prize}!` : "Claim Your Prize!"}
             </h3>
             <p className="text-gray-500 text-center mt-2 font-medium">Please enter your shipping details below.</p>
             

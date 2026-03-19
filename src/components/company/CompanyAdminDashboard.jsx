@@ -533,12 +533,22 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     }));
   };
 
-  const handlePuzzlePrizeChange = (index, value) => {
+  const handlePuzzlePrizeChange = (index, field, value) => {
     setDraft((prev) => {
       const nextPrizes = [...(prev.prizes || [])];
-      nextPrizes[index] = { ...nextPrizes[index], name: value };
+      nextPrizes[index] = { ...nextPrizes[index], [field]: value };
       return { ...prev, prizes: nextPrizes };
     });
+  };
+
+  const handlePuzzlePrizeImageUpload = (index, event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      handlePuzzlePrizeChange(index, "image", String(reader.result || ""));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleWheelDraftChange = (field, value) => {
@@ -1345,32 +1355,48 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
                             </button>
                           </div>
 
-                          <div className="grid gap-3">
+                          <div className="grid gap-4">
                             {(draft.prizes || []).map((prize, index) => (
-                              <div key={index} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100/50 flex items-center justify-between gap-4 transition-all">
-                                <div className="flex items-center gap-3 flex-1">
-                                  <div className="w-8 h-8 rounded-full bg-mint/10 text-mint font-black flex items-center justify-center text-xs shrink-0">
-                                    #{index + 1}
+                              <div key={index} className="bg-gray-50/50 rounded-3xl p-5 border border-gray-100/50 flex flex-col gap-4 relative transition-all">
+                                <div className="flex justify-between items-center border-b border-gray-100/50 pb-3">
+                                  <h4 className="font-black text-gray-900 text-lg">Prize {index + 1}</h4>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemovePuzzlePrize(index)}
+                                    className="p-2 text-accent/40 hover:text-accent bg-white rounded-full hover:bg-red-50 transition-all"
+                                    title="Remove Prize"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                                
+                                <div className="flex flex-col md:flex-row gap-5">
+                                  <div className="shrink-0">
+                                    <label className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 overflow-hidden bg-white transition-all">
+                                      {prize.image ? (
+                                        <img src={prize.image} alt="Prize" className="w-full h-full object-cover" />
+                                      ) : (
+                                        <>
+                                          <UploadCloud size={20} className="text-gray-400 mb-1" />
+                                          <span className="text-[10px] font-bold text-gray-400 uppercase">Image</span>
+                                        </>
+                                      )}
+                                      <input type="file" accept="image/*" onChange={(e) => handlePuzzlePrizeImageUpload(index, e)} className="hidden" />
+                                    </label>
                                   </div>
-                                  <div className="flex-1">
+                                  
+                                  <div className="flex-1 space-y-2">
+                                    <label className="text-[10px] font-black tracking-widest text-gray-400 uppercase">Prize Name</label>
                                     <input
                                       type="text"
-                                      value={prize.name}
-                                      placeholder="Ex: First Prize"
-                                      onChange={(e) => handlePuzzlePrizeChange(index, e.target.value)}
-                                      className="w-full bg-transparent p-2 border-b border-gray-200 outline-none focus:border-mint font-bold"
+                                      value={prize.name || ""}
+                                      placeholder="Ex: First Prize, $100 Gift Card"
+                                      onChange={(e) => handlePuzzlePrizeChange(index, "name", e.target.value)}
+                                      className="w-full bg-white p-3 rounded-xl border border-gray-100 outline-none focus:border-mint focus:ring-2 focus:ring-mint/20 font-bold"
                                     />
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1 ml-2">Awarded to Solver #{index + 1}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Awarded to Solver #{index + 1}</p>
                                   </div>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemovePuzzlePrize(index)}
-                                  className="p-2 text-accent/40 hover:text-accent shrink-0"
-                                  title="Remove Prize"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
                               </div>
                             ))}
                             {(!draft.prizes || draft.prizes.length === 0) && (
