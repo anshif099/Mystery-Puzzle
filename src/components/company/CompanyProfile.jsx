@@ -65,6 +65,9 @@ const extractThemeColors = (imgElement) => {
 
 const CompanyProfile = ({ companyAdmin, onUpdate }) => {
   const [logo, setLogo] = useState(companyAdmin?.logo || "");
+  const [address, setAddress] = useState(companyAdmin?.address || "");
+  const [publicEmail, setPublicEmail] = useState(companyAdmin?.publicEmail || "");
+  const [publicPhone, setPublicPhone] = useState(companyAdmin?.publicPhone || "");
   const [themeColor, setThemeColor] = useState(companyAdmin?.themeColor || "#63D3A4");
   const [themeSecondaryColor, setThemeSecondaryColor] = useState(companyAdmin?.themeSecondaryColor || "#9AA6D6");
   const [saving, setSaving] = useState(false);
@@ -75,6 +78,9 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
 
   useEffect(() => {
     setLogo(companyAdmin?.logo || "");
+    setAddress(companyAdmin?.address || "");
+    setPublicEmail(companyAdmin?.publicEmail || "");
+    setPublicPhone(companyAdmin?.publicPhone || "");
     setThemeColor(companyAdmin?.themeColor || "#63D3A4");
     setThemeSecondaryColor(companyAdmin?.themeSecondaryColor || "#9AA6D6");
   }, [companyAdmin]);
@@ -114,6 +120,9 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
       const updated = await updateCompanyAdmin(companyAdmin.id, {
         ...companyAdmin,
         logo,
+        address,
+        publicEmail,
+        publicPhone,
         themeColor,
         themeSecondaryColor,
       });
@@ -267,6 +276,47 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
               <p className="text-xs font-semibold text-gray-500">
                 These colors are seamlessly extracted from your uploaded logo, but you can adjust them here.
               </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8 pt-8 border-t border-gray-100">
+          <div className="space-y-4">
+            <label className="block text-sm font-black uppercase tracking-widest text-gray-500">
+              Company Address (Optional)
+            </label>
+            <textarea
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Enter your official company address..."
+              className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none min-h-[100px] resize-y"
+            />
+          </div>
+
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-black uppercase tracking-widest text-gray-500">
+                Public Email (Optional)
+              </label>
+              <input
+                type="email"
+                value={publicEmail}
+                onChange={(e) => setPublicEmail(e.target.value)}
+                placeholder="contact@company.com"
+                className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-black uppercase tracking-widest text-gray-500">
+                Public Phone (Optional)
+              </label>
+              <input
+                type="text"
+                value={publicPhone}
+                onChange={(e) => setPublicPhone(e.target.value)}
+                placeholder="+1 234 567 890"
+                className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+              />
             </div>
           </div>
         </div>

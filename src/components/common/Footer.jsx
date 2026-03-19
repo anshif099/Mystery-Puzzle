@@ -25,13 +25,29 @@ const Footer = ({ company }) => (
         </div>
 
         <div>
-          <h4 className="text-lg font-bold mb-6">Connect</h4>
-          <div className="flex gap-4">
-            {[1,2,3,4].map(i => (
-              <div key={i} className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 transition-colors flex items-center justify-center cursor-pointer">
-                ✨
+          <h4 className="text-lg font-bold mb-6">Contact Us</h4>
+          <div className="flex flex-col gap-4 opacity-80 font-medium">
+            {company?.address && (
+              <div className="flex gap-3">
+                <span className="shrink-0 font-bold italic">ADD:</span>
+                <span className="whitespace-pre-line">{company.address}</span>
               </div>
-            ))}
+            )}
+            {company?.publicEmail && (
+              <div className="flex gap-3">
+                <span className="shrink-0 font-bold italic">MAIL:</span>
+                <a href={`mailto:${company.publicEmail}`} className="hover:text-soft-yellow truncate">{company.publicEmail}</a>
+              </div>
+            )}
+            {company?.publicPhone && (
+              <div className="flex gap-3">
+                <span className="shrink-0 font-bold italic">CALL:</span>
+                <a href={`tel:${company.publicPhone}`} className="hover:text-soft-yellow">{company.publicPhone}</a>
+              </div>
+            )}
+            {!company?.address && !company?.publicEmail && !company?.publicPhone && (
+               <p className="italic text-sm">Join the brand-hunt and solve the puzzle!</p>
+            )}
           </div>
         </div>
       </div>
