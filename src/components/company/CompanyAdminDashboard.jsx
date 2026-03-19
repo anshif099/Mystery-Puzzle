@@ -382,6 +382,21 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
   }, [accessState, onLogout]);
 
   useLayoutEffect(() => {
+    if (companyAdmin?.name) {
+      document.title = `${companyAdmin.name} Admin | Mystery Puzzle Challenge`;
+    }
+    if (companyAdmin?.logo) {
+      const link = document.querySelector("link[rel~='icon']");
+      if (link) link.href = companyAdmin.logo;
+    }
+    return () => {
+      document.title = "Mystery Puzzle Challenge";
+      const link = document.querySelector("link[rel~='icon']");
+      if (link) link.href = "/favicon.ico";
+    };
+  }, [companyAdmin]);
+
+  useLayoutEffect(() => {
     // Primary Color
     const color = companyAdmin?.themeColor || session?.themeColor || "#63D3A4";
     const hex = color.replace("#", "");
@@ -842,6 +857,14 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
     profile: "Company Profile",
     subscription: "Subscription Status",
   };
+
+  if (loading && !companyAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="w-16 h-16 border-4 border-mint border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const subscriptionLabel =
     accessState === "Expired"

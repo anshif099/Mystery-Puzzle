@@ -56,6 +56,26 @@ const CompanyLandingView = ({ companyId, onAuthClick, onCompanyData }) => {
     };
   }, [company?.themeColor]);
 
+  useLayoutEffect(() => {
+    if (company?.name) {
+      document.title = `${company.name} | Mystery Puzzle Challenge`;
+    }
+    if (company?.logo) {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = company.logo;
+    }
+    return () => {
+      document.title = "Mystery Puzzle Challenge";
+      const link = document.querySelector("link[rel~='icon']");
+      if (link) link.href = "/favicon.ico"; // Reset to default
+    };
+  }, [company]);
+
   useEffect(() => {
     if (!campaign?.revealDate && !campaign?.createdAt) return;
     

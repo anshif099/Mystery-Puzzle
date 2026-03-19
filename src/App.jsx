@@ -119,6 +119,24 @@ function App() {
   }
   if (route.path.startsWith("/campaign/")) {
     const companyId = route.path.split("/").pop() || "";
+    
+    // If we're on a campaign route but don't have company data yet, 
+    // we show a blank loading screen to prevent "old site" flash.
+    if (!campaignCompany) {
+      return (
+        <div className="min-h-screen bg-white flex items-center justify-center">
+          <div className="w-16 h-16 border-4 border-mint border-t-transparent rounded-full animate-spin" />
+          <div className="hidden">
+            <CompanyLandingView 
+              companyId={companyId} 
+              onAuthClick={() => {}} 
+              onCompanyData={setCampaignCompany}
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen font-sans selection:bg-mint/30 overflow-x-hidden">
         <Header 
