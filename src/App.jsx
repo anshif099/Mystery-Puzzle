@@ -6,6 +6,7 @@ import AuthView from "./components/auth/AuthView";
 import AdminDashboard from "./components/admin/AdminDashboard";
 import CompanyAdminDashboard from "./components/company/CompanyAdminDashboard";
 import PlayPortal from "./components/play/PlayPortal";
+import CompanyLandingView from "./components/landing/CompanyLandingView";
 import { logoutGoogleSession } from "./services/challengeService";
 import { clearSession, readSession, writeSession } from "./services/session";
 
@@ -28,6 +29,7 @@ function App() {
   const [session, setSession] = useState(() => readSession());
   const [route, setRoute] = useState(() => readRoute());
   const [view, setView] = useState(() => initialDashboardView(readSession()));
+  const [campaignCompany, setCampaignCompany] = useState(null);
 
   useEffect(() => {
     const onPopState = () => setRoute(readRoute());
@@ -115,6 +117,28 @@ function App() {
       />
     );
   }
+  if (route.path.startsWith("/campaign/")) {
+    const companyId = route.path.split("/").pop() || "";
+    return (
+      <div className="min-h-screen font-sans selection:bg-mint/30 overflow-x-hidden">
+        <Header 
+          onAuthClick={() => setView("auth")} 
+          setView={handleHeaderSetView} 
+          company={campaignCompany}
+        />
+        <main className="transition-opacity duration-300">
+          <CompanyLandingView 
+            companyId={companyId} 
+            onAuthClick={(type) => {
+              navigate("/play", `?companyId=${encodeURIComponent(companyId)}&type=${type || "puzzle"}`);
+            }} 
+            onCompanyData={setCampaignCompany}
+          />
+        </main>
+        <Footer company={campaignCompany} />
+      </div>
+    );
+  }
 
   const effectiveView = (() => {
     if (session?.role === "super_admin") {
@@ -132,7 +156,7 @@ function App() {
   return (
     <div className="min-h-screen font-sans selection:bg-mint/30 overflow-x-hidden">
       {effectiveView !== "admin" && effectiveView !== "company_admin" && (
-        <Header onAuthClick={() => setView("auth")} setView={handleHeaderSetView} />
+        <Header onAuthClick={() => setView("auth")} setView={handleHeaderSetView} company={null} />
       )}
 
       <main className="transition-opacity duration-300">
@@ -147,7 +171,7 @@ function App() {
         )}
       </main>
 
-      {effectiveView !== "admin" && effectiveView !== "company_admin" && <Footer />}
+      {effectiveView !== "admin" && effectiveView !== "company_admin" && <Footer company={null} />}
     </div>
   );
 }

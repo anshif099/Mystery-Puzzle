@@ -1,13 +1,13 @@
 import React from 'react';
 
-const Footer = () => (
+const Footer = ({ company }) => (
   <footer className="bg-lavender-blue text-white py-20 px-6">
     <div className="max-w-6xl mx-auto">
       <div className="grid md:grid-cols-4 gap-12 mb-12">
         <div className="col-span-1 md:col-span-2">
           <div className="flex items-center gap-3 mb-6">
-            <img src="/icons.png" alt="Logo" className="w-12 h-12" />
-            <span className="text-2xl font-black">Mystery Puzzle</span>
+            <img src={company?.logo || "/icons.png"} alt="Logo" className="w-12 h-12 rounded-full" />
+            <span className="text-2xl font-black">{company?.name || "Mystery Puzzle"}</span>
           </div>
           <p className="opacity-80 font-medium max-w-sm">
             The ultimate viral brand-reveal challenge. Join the hunt, solve the puzzle, and win big.
@@ -37,7 +37,7 @@ const Footer = () => (
       </div>
       
       <div className="pt-8 border-t border-white/10 text-center opacity-60 text-sm font-medium">
-        © 2026 Mystery Puzzle Challenge. All rights reserved.
+        © 2026 {company?.name || "Mystery Puzzle Challenge"}. All rights reserved.
       </div>
     </div>
   </footer>

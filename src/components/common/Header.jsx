@@ -14,7 +14,7 @@ const NavLink = ({ href, children, onNav }) => (
   </a>
 );
 
-const Header = ({ onAuthClick, setView }) => {
+const Header = ({ onAuthClick, setView, company }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const goToSection = (section) => {
@@ -50,9 +50,9 @@ const Header = ({ onAuthClick, setView }) => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between relative">
       <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setView('landing'); setIsMobileMenuOpen(false); }}>
-        <img src="/icons.png" alt="Logo" className="w-10 h-10 object-contain" />
+        <img src={company?.logo || "/icons.png"} alt="Logo" className="w-10 h-10 object-contain rounded-full" />
         <span className="text-xl font-extrabold bg-gradient-to-r from-mint to-sky-blue bg-clip-text text-transparent hidden sm:block">
-          Mystery Puzzle
+          {company?.name || "Mystery Puzzle"}
         </span>
       </div>
 
