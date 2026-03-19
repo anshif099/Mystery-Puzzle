@@ -78,6 +78,7 @@ const sanitizeCompany = (data, id) => ({
   address: data?.address || "",
   password: data?.password || "",
   logo: data?.logo || "",
+  profileVideo: data?.profileVideo || "",
   themeColor: data?.themeColor || "",
   themeSecondaryColor: data?.themeSecondaryColor || "",
   campaigns: Number.isFinite(Number(data?.campaigns))
@@ -246,6 +247,7 @@ export const updateCompanyAdmin = async (id, payload) => {
     ...payload,
     companyId: payload.companyId || id,
     logo: payload.logo || "",
+    profileVideo: payload.profileVideo || "",
     address: payload.address || "",
     publicEmail: payload.publicEmail || "",
     publicPhone: payload.publicPhone || "",

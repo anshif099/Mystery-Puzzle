@@ -65,6 +65,7 @@ const extractThemeColors = (imgElement) => {
 
 const CompanyProfile = ({ companyAdmin, onUpdate }) => {
   const [logo, setLogo] = useState(companyAdmin?.logo || "");
+  const [profileVideo, setProfileVideo] = useState(companyAdmin?.profileVideo || "");
   const [address, setAddress] = useState(companyAdmin?.address || "");
   const [publicEmail, setPublicEmail] = useState(companyAdmin?.publicEmail || "");
   const [publicPhone, setPublicPhone] = useState(companyAdmin?.publicPhone || "");
@@ -78,6 +79,7 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
 
   useEffect(() => {
     setLogo(companyAdmin?.logo || "");
+    setProfileVideo(companyAdmin?.profileVideo || "");
     setAddress(companyAdmin?.address || "");
     setPublicEmail(companyAdmin?.publicEmail || "");
     setPublicPhone(companyAdmin?.publicPhone || "");
@@ -120,6 +122,7 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
       const updated = await updateCompanyAdmin(companyAdmin.id, {
         ...companyAdmin,
         logo,
+        profileVideo,
         address,
         publicEmail,
         publicPhone,
@@ -320,6 +323,24 @@ const CompanyProfile = ({ companyAdmin, onUpdate }) => {
             </div>
           </div>
         </div>
+        <div className="pt-8 border-t border-gray-100 space-y-4">
+          <label className="block text-sm font-black uppercase tracking-widest text-gray-500">
+            Profile Video Reference (Optional)
+          </label>
+          <div className="flex flex-col gap-2">
+            <input
+              type="text"
+              value={profileVideo}
+              onChange={(e) => setProfileVideo(e.target.value)}
+              placeholder="YouTube URL or direct video link (MP4)"
+              className="w-full bg-gray-50 p-4 rounded-2xl border border-transparent focus:border-mint focus:ring-2 focus:ring-mint/20 outline-none"
+            />
+            <p className="text-[10px] font-bold text-gray-400 px-1">
+              Example: https://www.youtube.com/watch?v=... or https://example.com/video.mp4
+            </p>
+          </div>
+        </div>
+
 
         <div className="pt-6 border-t border-gray-100 flex justify-end">
           <button

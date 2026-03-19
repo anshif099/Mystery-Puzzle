@@ -182,6 +182,25 @@ const CompanyLandingView = ({ companyId, onAuthClick, onCompanyData }) => {
   const prizes = localCampaign?.prizes || [];
   const puzzleEnabled = company?.features?.includes("Puzzle");
   const wheelEnabled = company?.features?.includes("Spin Wheel");
+  const profileVideo = company?.profileVideo || "";
+
+  const getEmbedUrl = (url) => {
+    if (!url) return null;
+    if (url.includes("youtube.com/watch?v=")) {
+      const id = url.split("v=")[1]?.split("&")[0];
+      return `https://www.youtube.com/embed/${id}`;
+    }
+    if (url.includes("youtu.be/")) {
+      const id = url.split("youtu.be/")[1]?.split("?")[0];
+      return `https://www.youtube.com/embed/${id}`;
+    }
+    return null;
+  };
+
+  const isDirectVideo = (url) => {
+    if (!url) return false;
+    return url.match(/\.(mp4|webm|ogg)$/i) || url.includes("firebasestorage.googleapis.com");
+  };
 
   const EditableText = ({ field, component: Tag = 'span', className = "", placeholder = "", multiline = false }) => {
     const value = localCampaign?.[field] || "";
@@ -319,7 +338,7 @@ const CompanyLandingView = ({ companyId, onAuthClick, onCompanyData }) => {
         <div className="floating-piece top-40 left-10 w-12 h-12 bg-mint rounded-lg rotate-12" />
         <div className="floating-piece top-60 right-20 w-16 h-16 bg-lavender-blue rounded-xl -rotate-6" />
 
-        <div className="relative mb-12">
+        <div className="relative mb-8">
           <div className="absolute inset-0 bg-mint/20 blur-2xl rounded-full scale-150 animate-pulse-subtle" />
           <img 
             src={company?.logo || "/icons.png"} 
@@ -327,6 +346,32 @@ const CompanyLandingView = ({ companyId, onAuthClick, onCompanyData }) => {
             className="relative w-40 h-40 md:w-56 md:h-56 object-contain drop-shadow-2xl rounded-full" 
           />
         </div>
+
+        {profileVideo && (
+          <div className="mb-12 w-full max-w-2xl mx-auto rounded-3xl overflow-hidden shadow-2xl border-4 border-white/50 bg-black/5 animate-in fade-in zoom-in duration-700">
+            {getEmbedUrl(profileVideo) ? (
+              <div className="aspect-video">
+                <iframe
+                  src={getEmbedUrl(profileVideo)}
+                  title="Company Profile Video"
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            ) : isDirectVideo(profileVideo) ? (
+              <video 
+                src={profileVideo} 
+                controls 
+                className="w-full h-full aspect-video object-cover"
+              />
+            ) : (
+              <div className="p-8 text-gray-400 font-bold italic">
+                Video link provided: <a href={profileVideo} target="_blank" rel="noreferrer" className="underline text-mint">{profileVideo}</a>
+              </div>
+            )}
+          </div>
+        )}
 
         <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 mb-6 tracking-tight leading-tight w-full max-w-4xl mx-auto">
           <EditableText 
