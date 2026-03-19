@@ -16,6 +16,7 @@ import {
   Trophy,
   UserCircle,
   Download,
+  ExternalLink,
 } from "lucide-react";
 import {
   buildOverviewMetrics,
@@ -887,6 +888,15 @@ const CompanyAdminDashboard = ({ session, onLogout }) => {
             active={activeTab === "dashboard"}
             onClick={() => {
               setActiveTab("dashboard");
+              setIsSidebarOpen(false);
+            }}
+          />
+          <SidebarItem
+            icon={ExternalLink}
+            label="Live Campaign Page"
+            active={false}
+            onClick={() => {
+              window.open(`/campaign/${companyId}`, "_blank");
               setIsSidebarOpen(false);
             }}
           />
